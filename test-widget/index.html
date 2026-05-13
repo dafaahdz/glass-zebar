@@ -149,6 +149,251 @@
 
       const dbStore = new IndexedDBStore()
 
+      // ==========================================
+      // ANIMEJS LUXURY ANIMATION SUITE - PHASE 0
+      // ==========================================
+      const THEME_SPEED_MULTIPLIER = 1.0
+
+      const EASINGS = {
+        springMicro: 'spring(1, 120, 15, 0)',
+        springExpand: 'spring(1, 80, 12, 0)',
+        liquid: 'cubicBezier(0.16, 1, 0.3, 1)',
+        easeInOut: 'cubicBezier(0.4, 0, 0.2, 1)',
+        linear: 'linear',
+        elasticPop: 'easeOutElastic(1, .8)',
+      }
+
+      const AnimationManager = {
+        instances: new Map(),
+
+        register(id, instance) {
+          this.cleanup(id)
+          this.instances.set(id, instance)
+        },
+
+        cleanup(id) {
+          if (this.instances.has(id)) {
+            const prev = this.instances.get(id)
+            try {
+              prev.pause()
+              anime.remove(prev.animatables)
+            } catch (e) {
+              console.warn(`[AnimationManager] Fail clearing instance for ${id}:`, e)
+            }
+            this.instances.delete(id)
+          }
+        },
+
+        cleanupAll() {
+          for (const [id] of this.instances) {
+            this.cleanup(id)
+          }
+        },
+      }
+
+      function useAnime(animeConfig, dependencies = [], customId = null) {
+        const elementRef = useRef(null)
+        const animInstanceRef = useRef(null)
+        const reactId = React.useId()
+        const animationId = customId || `anime-ref-${reactId}`
+
+        useEffect(() => {
+          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            if (elementRef.current && animeConfig.targets) {
+              const finalTransforms = {}
+              if (animeConfig.translateX !== undefined)
+                finalTransforms.translateX = Array.isArray(animeConfig.translateX)
+                  ? animeConfig.translateX[1]
+                  : animeConfig.translateX
+              if (animeConfig.opacity !== undefined)
+                finalTransforms.opacity = Array.isArray(animeConfig.opacity)
+                  ? animeConfig.opacity[1]
+                  : animeConfig.opacity
+              anime.set(elementRef.current, finalTransforms)
+            }
+            return
+          }
+
+          try {
+            if (!elementRef.current) return
+
+            AnimationManager.cleanup(animationId)
+
+            const resolvedConfig = {
+              ...animeConfig,
+              targets: elementRef.current,
+              duration: (animeConfig.duration || 1000) * THEME_SPEED_MULTIPLIER,
+            }
+
+            const instance = anime(resolvedConfig)
+            animInstanceRef.current = instance
+            AnimationManager.register(animationId, instance)
+          } catch (error) {
+            console.warn(`[Anime.js Fail] Fallback active for ${animationId}:`, error)
+            if (elementRef.current) {
+              elementRef.current.classList.add('fallback-css-animation-active')
+            }
+          }
+
+          return () => {
+            AnimationManager.cleanup(animationId)
+          }
+        }, dependencies)
+
+        return elementRef
+      }
+
+      function useFontFaceObserver(fontName) {
+        const [loaded, setLoaded] = useState(false)
+        useEffect(() => {
+          if (!document.fonts) {
+            setLoaded(true)
+            return
+          }
+          document.fonts.ready
+            .then(() => {
+              const isAvailable = document.fonts.check(`12px ${fontName}`)
+              setLoaded(isAvailable)
+            })
+            .catch(() => setLoaded(true))
+        }, [fontName])
+        return loaded
+      }
+
+      const animePrimitives = {
+        fadeIn(ref, duration = 400) {
+          if (!ref.current) return
+          return anime({
+            targets: ref.current,
+            opacity: [0, 1],
+            duration: duration,
+            easing: EASINGS.easeInOut,
+          })
+        },
+        bounceOnce(ref, scaleAmt = 1.12, duration = 300) {
+          if (!ref.current) return
+          return anime({
+            targets: ref.current,
+            scale: [1, scaleAmt, 1],
+            duration: duration,
+            easing: EASINGS.elasticPop,
+          })
+        },
+        slideInLeft(ref, duration = 600) {
+          if (!ref.current) return
+          return anime({
+            targets: ref.current,
+            translateX: [-50, 0],
+            opacity: [0, 1],
+            duration: duration,
+            easing: EASINGS.springMicro,
+          })
+        },
+      }
+
+      const DebugOverlay = () => {
+        const [fps, setFps] = useState(60)
+        const [activeAnims, setActiveAnims] = useState(0)
+        const [showOverlay, setShowOverlay] = useState(false)
+
+        useEffect(() => {
+          let lastTime = performance.now()
+          let frames = 0
+          let animFrameId
+
+          const calculateFps = () => {
+            frames++
+            const now = performance.now()
+            if (now >= lastTime + 1000) {
+              const currentFps = Math.round((frames * 1000) / (now - lastTime))
+              setFps(currentFps)
+              frames = 0
+              lastTime = now
+            }
+
+            setActiveAnims(AnimationManager.instances.size)
+            animFrameId = requestAnimationFrame(calculateFps)
+          }
+
+          const handleShortcut = (e) => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+              setShowOverlay((prev) => !prev)
+            }
+          }
+
+          window.addEventListener('keydown', handleShortcut)
+          animFrameId = requestAnimationFrame(calculateFps)
+
+          return () => {
+            window.removeEventListener('keydown', handleShortcut)
+            cancelAnimationFrame(animFrameId)
+          }
+        }, [])
+
+        if (!showOverlay) return null
+
+        return (
+          <div className="debug-perf-overlay">
+            <span className="debug-stat-item">
+              FPS: <strong style={{ color: fps < 55 ? '#f38ba8' : '#a6e3a1' }}>{fps}</strong>
+            </span>
+            <span className="debug-stat-item">
+              Anims: <strong>{activeAnims}</strong>
+            </span>
+            <button className="debug-cleanup-btn" onClick={() => AnimationManager.cleanupAll()}>
+              Cleanup All
+            </button>
+          </div>
+        )
+      }
+
+      function useKonamiEasterEgg() {
+        useEffect(() => {
+          const code = [
+            'ArrowUp',
+            'ArrowUp',
+            'ArrowDown',
+            'ArrowDown',
+            'ArrowLeft',
+            'ArrowRight',
+            'ArrowLeft',
+            'ArrowRight',
+            'b',
+            'a',
+          ]
+          let index = 0
+
+          const handleKeyDown = (e) => {
+            if (e.key === code[index]) {
+              index++
+              if (index === code.length) {
+                triggerCelebration()
+                index = 0
+              }
+            } else {
+              index = 0
+            }
+          }
+
+          const triggerCelebration = () => {
+            if (window.addToast) {
+              window.addToast('🎉 KONAMI MODE ACTIVATED! 🎉', 'nf-md-controller')
+            }
+            anime({
+              targets: '.status-pill',
+              translateY: [0, -10, 0],
+              rotate: '360deg',
+              delay: anime.stagger(100),
+              duration: 1200,
+              easing: 'spring(1, 100, 10, 0)',
+            })
+          }
+
+          window.addEventListener('keydown', handleKeyDown)
+          return () => window.removeEventListener('keydown', handleKeyDown)
+        }, [])
+      }
+
       // Define Zebar Providers
       const providers = zebar.createProviderGroup({
         network: { type: 'network' },
@@ -1129,7 +1374,10 @@
 
           // Progress calculations for 360-degree Interactive Track Progress Ring
           const position = media?.currentSession?.position || 0
-          const duration = media?.currentSession?.duration || (media?.currentSession?.endTime - media?.currentSession?.startTime) || 1
+          const duration =
+            media?.currentSession?.duration ||
+            media?.currentSession?.endTime - media?.currentSession?.startTime ||
+            1
           const progressPercent = Math.min(100, Math.max(0, (position / duration) * 100))
 
           const radius = 10.5
@@ -1160,12 +1408,7 @@
 
                   {/* 360-degree SVG Track Progress Ring */}
                   <svg className="vinyl-progress-ring" viewBox="0 0 24 24">
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r={radius}
-                      className="vinyl-progress-ring-bg"
-                    />
+                    <circle cx="12" cy="12" r={radius} className="vinyl-progress-ring-bg" />
                     <circle
                       cx="12"
                       cy="12"
@@ -1178,11 +1421,7 @@
                     />
                   </svg>
 
-                  {albumName && (
-                    <span className="album-name-hover-text">
-                      {albumName}
-                    </span>
-                  )}
+                  {albumName && <span className="album-name-hover-text">{albumName}</span>}
 
                   <div className="album-glass-glare"></div>
                 </div>
@@ -1743,6 +1982,9 @@
         const confettiRef = useRef(null)
         const [errors, setErrors] = useState([])
 
+        // Activate Konami Code Easter Egg
+        useKonamiEasterEgg()
+
         // Lifted Last.fm States
         const [lastfmUsername, setLastfmUsername] = useState('')
         const [lastfmApiKey, setLastfmApiKey] = useState('')
@@ -1978,6 +2220,7 @@
 
         return (
           <div className="app">
+            <DebugOverlay />
             <WeatherPreloader />
             {/* High-Performance Offscreen Canvas for Worker Confetti with strict layout containment */}
             <canvas

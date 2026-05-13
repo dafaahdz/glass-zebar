@@ -1640,3 +1640,61 @@ body,
   pointer-events: none;
   z-index: 4;
 }
+
+/* ==========================================================================
+   ANIMEJS LUXURY ANIMATION SUITE - PHASE 0 SUPPORT
+   ========================================================================== */
+
+/* Hardware Accelerated Composited Layer Promotion */
+.gpu-accelerated-node {
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
+}
+
+/* Fallback transitions when Anime.js is disabled or fails */
+.fallback-css-animation-active {
+  transition: all 0.3s ease-in-out !important;
+}
+
+/* Developer Real-time FPS & Active Instances Overlay */
+.debug-perf-overlay {
+  position: fixed;
+  bottom: 36px;
+  left: 10px;
+  background: rgba(30, 30, 46, 0.85); /* Catppuccin Crust alpha */
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font-monospace);
+  font-size: 10px;
+  color: #cdd6f4; /* Catppuccin Text */
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.debug-stat-item strong {
+  font-weight: bold;
+}
+
+.debug-cleanup-btn {
+  background: rgba(243, 139, 168, 0.15); /* Catppuccin Red alpha */
+  border: 1px solid #f38ba8;
+  color: #f38ba8;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-size: 9px;
+  font-family: var(--font-sans);
+  transition: all 0.2s ease;
+}
+
+.debug-cleanup-btn:hover {
+  background: #f38ba8;
+  color: #11111b;
+}
