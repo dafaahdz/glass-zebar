@@ -1078,6 +1078,7 @@
           const textRef = useRef(null)
           const [isHovered, setIsHovered] = useState(false)
           const [shouldScroll, setShouldScroll] = useState(false)
+          const isFontLoaded = useFontFaceObserver('Outfit')
           const speedRef = useRef(0.5)
           const posXRef = useRef(0)
 
@@ -1140,7 +1141,7 @@
             setIsInlineSettingsOpen(!isInlineSettingsOpen)
           }
 
-          // Measure overflow to decide if marquee scrolling is needed
+          // 1. Measure overflow
           useEffect(() => {
             if (!textRef.current) return
             const checkOverflow = () => {
@@ -1148,14 +1149,22 @@
               const wrapper = textRef.current.parentElement
               if (!wrapper) return
               const wrapperWidth = wrapper.offsetWidth
-              const singleWidth = shouldScroll
+              const textWidth = shouldScroll
                 ? textRef.current.scrollWidth / 2
                 : textRef.current.scrollWidth
 
-              setShouldScroll(singleWidth > wrapperWidth)
+              console.log('[Marquee Debug] Measuring:', {
+                text: textRef.current.innerText,
+                textWidth,
+                wrapperWidth,
+                shouldScroll,
+                isOverflowing: textWidth > wrapperWidth
+              })
+
+              setShouldScroll(textWidth > wrapperWidth)
             }
 
-            const timer = setTimeout(checkOverflow, 100)
+            const timer = setTimeout(checkOverflow, 120)
             window.addEventListener('resize', checkOverflow)
             return () => {
               clearTimeout(timer)
@@ -1164,31 +1173,44 @@
           }, [
             media.currentSession?.title,
             media.currentSession?.artist,
-            isHovered,
             shouldScroll,
             isInlineSettingsOpen,
           ])
 
-          // Deceleration tick loop for smooth marquee scrolling
+          // 2. High-Performance Friction Deceleration Ticker
           useEffect(() => {
-            if (!shouldScroll || isInlineSettingsOpen) {
+            console.log('[Marquee Debug] Ticker Setup:', {
+              shouldScroll,
+              isInlineSettingsOpen,
+              hasTextRef: !!textRef.current
+            })
+
+            if (!shouldScroll || isInlineSettingsOpen || !textRef.current) {
               posXRef.current = 0
-              if (textRef.current) textRef.current.style.transform = `translateX(0px)`
+              if (textRef.current) {
+                textRef.current.style.transform = `translateX(0px)`
+              }
               return
             }
 
+            const textWidth = textRef.current.scrollWidth / 2
+            const baseSpeed = Math.min(1.2, Math.max(0.4, textWidth / 350))
+
+            console.log('[Marquee Debug] Ticker Started:', { textWidth, baseSpeed })
+
             let animId
             let lastTime = performance.now()
+
             const tick = (now) => {
               if (!textRef.current) return
 
-              const textWidth = textRef.current.scrollWidth / 2
               const dt = (now - lastTime) / 16.666
 
               if (isHovered) {
-                speedRef.current *= Math.pow(0.92, dt)
+                // Exponential friction decay for luxury deceleration
+                speedRef.current *= Math.pow(0.88, dt)
               } else {
-                const baseSpeed = 0.5
+                // Sleek acceleration back to baseSpeed
                 speedRef.current = speedRef.current * Math.pow(0.9, dt) + baseSpeed * 0.1 * dt
               }
 
@@ -1203,7 +1225,10 @@
             }
 
             animId = requestAnimationFrame(tick)
-            return () => cancelAnimationFrame(animId)
+            return () => {
+              console.log('[Marquee Debug] Ticker Stopped')
+              cancelAnimationFrame(animId)
+            }
           }, [isHovered, shouldScroll, isInlineSettingsOpen])
 
           const trackString = `${media.currentSession.title} - ${media.currentSession.artist}    •    `
@@ -1293,10 +1318,9 @@
                     ref={textRef}
                     className="media-marquee-text"
                     style={{
-                      transform: `translateX(${posXRef.current}px)`,
-                      animation: 'none',
                       display: 'inline-block',
                       whiteSpace: 'nowrap',
+                      animation: 'none',
                     }}
                   >
                     {shouldScroll ? (
@@ -1382,8 +1406,63 @@
 
           const radius = 10.5
           const circumference = 2 * Math.PI * radius // ~65.97
-          const strokeDasharray = circumference
-          const strokeDashoffset = circumference - (progressPercent / 100) * circumference
+
+          const vinylRef = useRef(null)
+          const ringBarRef = useRef(null)
+          const vinylAnimInstance = useRef(null)
+
+          // 1. Persistent Vinyl Record Spinner (Anime.js)
+          useEffect(() => {
+            if (!vinylRef.current || !hasSession) return
+
+            vinylAnimInstance.current = anime({
+              targets: vinylRef.current,
+              rotate: '360deg',
+              duration: 10000,
+              loop: true,
+              autoplay: isPlaying,
+              easing: 'linear',
+            })
+
+            return () => {
+              if (vinylAnimInstance.current) {
+                vinylAnimInstance.current.pause()
+                anime.remove(vinylRef.current)
+                vinylAnimInstance.current = null
+              }
+            }
+          }, [hasSession])
+
+          // 2. Playback State Synchronization
+          useEffect(() => {
+            if (!vinylAnimInstance.current) return
+
+            if (isPlaying) {
+              vinylAnimInstance.current.play()
+            } else {
+              vinylAnimInstance.current.pause()
+            }
+          }, [isPlaying])
+
+          // 3. Instant Position Seeking on song seek (only when paused)
+          useEffect(() => {
+            if (!vinylAnimInstance.current || isPlaying) return
+            const targetAngle = ((position % 10000) / 10000) * 360
+            anime.set(vinylRef.current, { rotate: `${targetAngle}deg` })
+          }, [position, isPlaying])
+
+          // 4. Progress Ring SVG Stroke Anim
+          useEffect(() => {
+            if (!ringBarRef.current) return
+            const targetOffset = circumference - (progressPercent / 100) * circumference
+
+            anime({
+              targets: ringBarRef.current,
+              strokeDashoffset: targetOffset,
+              duration: 350,
+              easing: EASINGS.liquid,
+            })
+          }, [progressPercent])
 
           return (
             <div
@@ -1395,7 +1474,7 @@
             >
               {hasSession && (
                 <div className="album-glass-capsule">
-                  <div className={`vinyl-wrapper ${isPlaying ? 'spinning' : 'paused'}`}>
+                  <div ref={vinylRef} className="vinyl-wrapper">
                     {albumCover ? (
                       <img src={albumCover} className="vinyl-cover" alt="album art" />
                     ) : (
@@ -1410,13 +1489,14 @@
                   <svg className="vinyl-progress-ring" viewBox="0 0 24 24">
                     <circle cx="12" cy="12" r={radius} className="vinyl-progress-ring-bg" />
                     <circle
+                      ref={ringBarRef}
                       cx="12"
                       cy="12"
                       r={radius}
                       className="vinyl-progress-ring-bar"
                       style={{
-                        strokeDasharray: strokeDasharray,
-                        strokeDashoffset: strokeDashoffset,
+                        strokeDasharray: circumference,
+                        strokeDashoffset: circumference,
                       }}
                     />
                   </svg>
