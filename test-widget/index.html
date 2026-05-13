@@ -940,6 +940,7 @@
             return glazewm.currentWorkspaces.find((w) => w.hasFocus)?.name
           }, [glazewm.currentWorkspaces])
 
+          // 1. Sliding indicator animation with squish/stretch
           useEffect(() => {
             if (!containerRef.current || !indicatorRef.current || !focusedWorkspaceName) return
 
@@ -966,6 +967,24 @@
             })
           }, [focusedWorkspaceName])
 
+          // 2. Outward radial staggered scale bounce ripple on focus shift
+          useEffect(() => {
+            if (!containerRef.current || !focusedWorkspaceName) return
+
+            const buttons = containerRef.current.querySelectorAll('.workspace')
+            const activeIndex = glazewm.currentWorkspaces.findIndex((w) => w.hasFocus)
+
+            if (activeIndex >= 0 && buttons.length > 0) {
+              anime.remove(buttons)
+              anime({
+                targets: buttons,
+                scale: [1, 1.12, 1],
+                delay: anime.stagger(55, { from: activeIndex }),
+                easing: 'spring(1, 85, 10, 0)',
+              })
+            }
+          }, [focusedWorkspaceName])
+
           return (
             <div ref={containerRef} className="workspaces">
               <div ref={indicatorRef} className="workspace-liquid-indicator" />
@@ -978,6 +997,7 @@
                     glazewm.runCommand(`focus --workspace ${workspace.name}`)
                   }}
                   key={workspace.name}
+                  style={{ transformOrigin: 'center' }}
                 >
                   <span className="workspace-text">{workspace.displayName ?? workspace.name}</span>
                 </button>
@@ -1669,6 +1689,30 @@
         )
       }
 
+      // Finite State Machine (FSM) configurations for Pomodoro statuses
+      const POMODORO_STATES = {
+        idle: {
+          icon: 'nf-md-timer_sand',
+          accentColor: 'var(--ctp-mocha-subtext0)',
+          pulse: false,
+        },
+        work: {
+          icon: 'nf-md-timer',
+          accentColor: 'var(--kawaii-peach)',
+          pulse: true,
+        },
+        gap: {
+          icon: 'nf-md-timer_sand',
+          accentColor: 'var(--kawaii-yellow)',
+          pulse: true,
+        },
+        break: {
+          icon: 'nf-md-coffee',
+          accentColor: 'var(--kawaii-lavender)',
+          pulse: true,
+        },
+      }
+
       // Pomodoro Widget Component (Memoized & fully powered by IndexedDB asinkron!)
       const PomodoroWidget = React.memo(() => {
         const [workTime, setWorkTime] = useState(25 * 60)
@@ -1680,6 +1724,10 @@
         const [mode, setMode] = useState('work') // 'work', 'gap', 'break'
         const [isActive, setIsActive] = useState(false)
         const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+        const pomodoroRef = useRef(null)
+        const status = isActive ? mode : 'idle'
+        const currentFsmState = POMODORO_STATES[status] || POMODORO_STATES.idle
 
         // Load settings asynchronously from IndexedDB
         useEffect(() => {
@@ -1811,6 +1859,30 @@
           processCompletion()
         }, [timeLeft === 0, isActive])
 
+        // 3. Pomodoro FSM Pulsing Sequence (Anime.js)
+        useEffect(() => {
+          if (!pomodoroRef.current) return
+
+          anime.remove(pomodoroRef.current)
+
+          if (currentFsmState.pulse) {
+            anime({
+              targets: pomodoroRef.current,
+              scale: [1, 1.025, 1],
+              duration: 2000,
+              loop: true,
+              easing: 'easeInOutSine',
+            })
+          } else {
+            anime({
+              targets: pomodoroRef.current,
+              scale: 1.0,
+              duration: 300,
+              easing: 'cubicBezier(0.16, 1, 0.3, 1)',
+            })
+          }
+        }, [status])
+
         const toggleTimer = async () => {
           if (isDialogOpen) return
           const newActive = !isActive
@@ -1911,11 +1983,6 @@
           }, 900)
         }
 
-        const getIcon = () => {
-          if (mode === 'gap') return 'nf-md-timer_sand'
-          return mode === 'work' ? 'nf-md-timer' : 'nf-md-coffee'
-        }
-
         const getEnergyLevel = () => {
           if (mode === 'work') return (timeLeft / workTime) * 100
           if (mode === 'break') return ((breakTime - timeLeft) / breakTime) * 100
@@ -1926,18 +1993,21 @@
         return (
           <div className="pomodoro-container" style={{ position: 'relative' }}>
             <div
+              ref={pomodoroRef}
               onClick={toggleTimer}
               onContextMenu={openDialog}
               onAuxClick={(e) => e.button === 1 && resetTimer(e)}
               title="Left: Start/Pause | Middle: Reset | Right: Settings"
+              style={{ transformOrigin: 'center' }}
             >
               <StatusPill
                 className={`pomodoro ${mode} ${isDialogOpen ? 'expanded' : ''} ${isDialogOpen ? 'no-peel' : ''} ${isActive ? 'active-timer' : ''}`}
-                icon={getIcon()}
+                icon={currentFsmState.icon}
                 value={formatTime(timeLeft)}
                 style={{
                   opacity: isActive ? 1 : 0.7,
                   '--charge-level': `${energyLevel}%`,
+                  '--pill-color': currentFsmState.accentColor,
                 }}
                 extraContent={
                   <>
@@ -2064,8 +2134,11 @@
         }
       }
 
-      const ToastItem = React.memo(({ toast }) => {
+      const ToastItem = React.memo(({ toast, onRemove }) => {
         const elRef = useRef(null)
+        const progressBarRef = useRef(null)
+        const progressAnimRef = useRef(null)
+
         const isDragging = useRef(false)
         const startY = useRef(0)
         const currentY = useRef(0)
@@ -2081,12 +2154,49 @@
               easing: 'easeOutElastic(1, 0.75)',
             })
           }
+
+          if (progressBarRef.current) {
+            progressAnimRef.current = anime({
+              targets: progressBarRef.current,
+              width: ['100%', '0%'],
+              duration: 5000,
+              easing: 'linear',
+              complete: () => {
+                if (elRef.current) {
+                  anime({
+                    targets: elRef.current,
+                    translateY: -50,
+                    opacity: 0,
+                    scale: 0.9,
+                    duration: 400,
+                    easing: 'easeInBack',
+                    complete: () => {
+                      onRemove(toast.id)
+                    }
+                  })
+                } else {
+                  onRemove(toast.id)
+                }
+              }
+            })
+          }
+
+          return () => {
+            if (progressAnimRef.current) {
+              progressAnimRef.current.pause()
+            }
+          }
         }, [])
 
         const handlePointerDown = (e) => {
           isDragging.current = true
           startY.current = e.clientY
-          if (elRef.current) elRef.current.style.transition = 'none'
+          if (progressAnimRef.current) {
+            progressAnimRef.current.pause()
+          }
+          if (elRef.current) {
+            elRef.current.style.transition = 'none'
+          }
         }
 
         const handlePointerMove = (e) => {
@@ -2114,10 +2224,7 @@
               duration: 300,
               easing: 'easeInQuad',
               complete: () => {
-                // Dismiss manually from DOM
-                if (elRef.current) {
-                  elRef.current.style.display = 'none'
-                }
+                onRemove(toast.id)
               },
             })
           } else if (elRef.current) {
@@ -2129,9 +2236,26 @@
               opacity: 1,
               duration: 400,
               easing: 'easeOutElastic(1, 0.75)',
+              complete: () => {
+                if (progressAnimRef.current) {
+                  progressAnimRef.current.play()
+                }
+              }
             })
           }
           currentY.current = 0
+        }
+
+        const handleMouseEnter = () => {
+          if (progressAnimRef.current) {
+            progressAnimRef.current.pause()
+          }
+        }
+
+        const handleMouseLeave = () => {
+          if (progressAnimRef.current && !isDragging.current) {
+            progressAnimRef.current.play()
+          }
         }
 
         return (
@@ -2142,6 +2266,8 @@
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             style={{ cursor: 'grab' }}
           >
             <div className="sparkles-container">
@@ -2160,7 +2286,11 @@
             </div>
             <i className={`nf ${toast.icon}`}></i>
             <span>{toast.message}</span>
-            <div className="toast-progress"></div>
+            <div
+              ref={progressBarRef}
+              className="toast-progress"
+              style={{ animation: 'none', width: '100%' }}
+            ></div>
           </div>
         )
       })
@@ -2400,9 +2530,6 @@
           window.addToast = (message, icon) => {
             const id = Date.now()
             setToasts((prev) => [...prev, { id, message, icon }])
-            setTimeout(() => {
-              setToasts((prev) => prev.filter((t) => t.id !== id))
-            }, 5000)
           }
         }, [])
 
@@ -2426,7 +2553,11 @@
 
             <div className="toast-container">
               {toasts.map((toast) => (
-                <ToastItem key={toast.id} toast={toast} />
+                <ToastItem
+                  key={toast.id}
+                  toast={toast}
+                  onRemove={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+                />
               ))}
             </div>
 
