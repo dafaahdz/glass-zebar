@@ -437,6 +437,8 @@
         accessoryIcon,
         ...props
       }) => {
+        const pillRef = useRef(null)
+
         const handleMouseMove = (e) => {
           const rect = e.currentTarget.getBoundingClientRect()
           const x = (e.clientX - rect.left - rect.width / 2) * 0.1
@@ -449,6 +451,22 @@
           e.currentTarget.style.setProperty('--magnet-y', '0px')
         }
 
+        const handleClick = (e) => {
+          window.triggerRipple(e)
+
+          if (pillRef.current) {
+            anime.remove(pillRef.current)
+            anime({
+              targets: pillRef.current,
+              scale: [1, 1.05, 1],
+              duration: 400,
+              easing: 'spring(1, 80, 10, 0)',
+            })
+          }
+
+          if (props.onClick) props.onClick(e)
+        }
+
         return (
           <div
             className="status-pill-container"
@@ -457,12 +475,10 @@
             onMouseLeave={handleMouseLeave}
           >
             <div
+              ref={pillRef}
               className={`status-pill ${className || ''}`}
               {...props}
-              onClick={(e) => {
-                window.triggerRipple(e)
-                if (props.onClick) props.onClick(e)
-              }}
+              onClick={handleClick}
             >
               {extraContent}
               <i className={`nf ${icon}`}></i>
@@ -639,6 +655,10 @@
           const [isHovered, setIsHovered] = useState(false)
           const [fallbackBattery, setFallbackBattery] = useState(null)
 
+          const liquidRef = useRef(null)
+          const valueTextRef = useRef(null)
+          const tooltipTextRef = useRef(null)
+
           useEffect(() => {
             if (zebarBattery) return
 
@@ -672,6 +692,85 @@
           const battery = zebarBattery || fallbackBattery
 
           console.log('Battery Object in Widget:', battery)
+
+          const level = battery ? Math.round(battery.chargePercent) : 50
+
+          // 1. Battery Liquid Wave Clip-Path Cycle (Anime.js)
+          useEffect(() => {
+            if (!liquidRef.current || !battery) return
+
+            anime.remove(liquidRef.current)
+
+            const l = level
+            const lMin1 = Math.max(0, l - 1.5)
+            const lMax1 = Math.min(100, l + 1.5)
+            const lMin2 = Math.max(0, l - 1.0)
+            const lMax2 = Math.min(100, l + 1.0)
+
+            // Start an infinite alternating wave loop
+            anime({
+              targets: liquidRef.current,
+              clipPath: [
+                `polygon(0% 0%, ${lMin1}% 0%, ${lMax2}% 35%, ${lMin1}% 70%, ${lMax2}% 100%, 0% 100%)`,
+                `polygon(0% 0%, ${lMax1}% 0%, ${lMin2}% 35%, ${lMax1}% 70%, ${lMin2}% 100%, 0% 100%)`,
+              ],
+              duration: 2000,
+              direction: 'alternate',
+              loop: true,
+              easing: 'easeInOutSine',
+            })
+          }, [level, !!battery])
+
+          // 2. Spring Expand/Collapse Sequence on Hover (Anime.js)
+          useEffect(() => {
+            if (!valueTextRef.current || !tooltipTextRef.current) return
+
+            anime.remove([valueTextRef.current, tooltipTextRef.current])
+
+            if (isHovered) {
+              // Value text flies up and fades out
+              anime({
+                targets: valueTextRef.current,
+                maxWidth: 0,
+                opacity: 0,
+                translateY: -20,
+                duration: 500,
+                easing: 'spring(1, 80, 12, 0)',
+              })
+
+              // Tooltip text flies up from bottom, fades in
+              anime({
+                targets: tooltipTextRef.current,
+                maxWidth: 130,
+                opacity: 0.8,
+                translateY: 0,
+                duration: 500,
+                delay: 80, // Snappy staggered entrance
+                easing: 'spring(1, 80, 12, 0)',
+              })
+            } else {
+              // Value text flies down from top, fades in
+              anime({
+                targets: valueTextRef.current,
+                maxWidth: 50,
+                opacity: 1,
+                translateY: 0,
+                duration: 500,
+                delay: 80, // Snappy staggered entrance
+                easing: 'spring(1, 80, 12, 0)',
+              })
+
+              // Tooltip text flies down and fades out
+              anime({
+                targets: tooltipTextRef.current,
+                maxWidth: 0,
+                opacity: 0,
+                translateY: 20,
+                duration: 500,
+                easing: 'spring(1, 80, 12, 0)',
+              })
+            }
+          }, [isHovered])
 
           if (!battery) return null
 
@@ -723,10 +822,18 @@
                   style={{ '--charge-level': `${battery.chargePercent}%` }}
                   appendContent={
                     <span className="battery-text-container">
-                      <span className={`battery-value-text ${isHovered ? 'hidden' : ''}`}>
+                      <span
+                        ref={valueTextRef}
+                        className="battery-value-text"
+                        style={{ transition: 'none' }}
+                      >
                         {valueText}
                       </span>
-                      <span className={`battery-tooltip-text ${isHovered ? 'visible' : ''}`}>
+                      <span
+                        ref={tooltipTextRef}
+                        className="battery-tooltip-text"
+                        style={{ transition: 'none' }}
+                      >
                         {tooltipText}
                       </span>
                     </span>
@@ -735,7 +842,8 @@
                     <>
                       <div className="battery-liquid-container">
                         <div
-                          className={`battery-liquid ${getBatteryStatusClass(battery.chargePercent, isCharging)}`}
+                          ref={liquidRef}
+                          className={`battery-liquid battery-liquid-wave ${getBatteryStatusClass(battery.chargePercent, isCharging)}`}
                         ></div>
                       </div>
                       {isCharging && (
@@ -1158,7 +1266,7 @@
                 textWidth,
                 wrapperWidth,
                 shouldScroll,
-                isOverflowing: textWidth > wrapperWidth
+                isOverflowing: textWidth > wrapperWidth,
               })
 
               setShouldScroll(textWidth > wrapperWidth)
@@ -1182,7 +1290,7 @@
             console.log('[Marquee Debug] Ticker Setup:', {
               shouldScroll,
               isInlineSettingsOpen,
-              hasTextRef: !!textRef.current
+              hasTextRef: !!textRef.current,
             })
 
             if (!shouldScroll || isInlineSettingsOpen || !textRef.current) {

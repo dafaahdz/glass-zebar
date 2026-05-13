@@ -1698,3 +1698,11 @@ body,
   background: #f38ba8;
   color: #11111b;
 }
+
+/* 5. Liquid Wave Animation Support Class */
+.battery-liquid-wave {
+  width: 100% !important;
+  transition:
+    background 0.4s ease,
+    box-shadow 0.4s ease !important;
+}
