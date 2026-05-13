@@ -1,0 +1,1979 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Google Fonts Preload to prevent FOIT/FOUT -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Custom styles. -->
+    <link rel="stylesheet" type="text/css" href="./styles.css" />
+
+    <!-- Allows React to be run buildless via "text/babel" script below. -->
+    <script
+      src="https://unpkg.com/@babel/standalone@7.25.6/babel.min.js"
+      integrity="sha256-aS0B0wnsaDByLfE16h4MDCP1fQFccysd1YWOcV+gbBo="
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+      // Play Retro Sound Helper
+      window.playRetroSound = () => {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)()
+          const osc = ctx.createOscillator()
+          const gain = ctx.createGain()
+          osc.type = 'square'
+          osc.frequency.setValueAtTime(440, ctx.currentTime)
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.1)
+          gain.gain.setValueAtTime(0.05, ctx.currentTime)
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1)
+          osc.connect(gain)
+          gain.connect(ctx.destination)
+          osc.start()
+          osc.stop(ctx.currentTime + 0.1)
+        } catch (e) {
+          console.error('Audio API error', e)
+        }
+      }
+
+      import React, { useState, useEffect, useRef, useMemo } from 'https://esm.sh/react@18?dev'
+      import { createRoot } from 'https://esm.sh/react-dom@18/client?dev'
+      import confetti from 'https://esm.sh/canvas-confetti@1.9.2'
+      import anime from 'https://esm.sh/animejs@3.2.1'
+      import * as zebar from 'https://esm.sh/zebar@3.0'
+
+      // Modern IndexedDB Async Storage Helper (2026 Ready!)
+      class IndexedDBStore {
+        constructor(dbName = 'ZebarPomodoroDB', storeName = 'settings') {
+          this.dbName = dbName
+          this.storeName = storeName
+          this.db = null
+        }
+
+        init() {
+          if (this.db) return Promise.resolve(this.db)
+          return new Promise((resolve, reject) => {
+            const request = indexedDB.open(this.dbName, 1)
+            request.onupgradeneeded = (e) => {
+              const db = e.target.result
+              if (!db.objectStoreNames.contains(this.storeName)) {
+                db.createObjectStore(this.storeName)
+              }
+            }
+            request.onsuccess = (e) => {
+              this.db = e.target.result
+              resolve(this.db)
+            }
+            request.onerror = (e) => reject(e.target.error)
+          })
+        }
+
+        async get(key, defaultValue) {
+          await this.init()
+          return new Promise((resolve) => {
+            const transaction = this.db.transaction(this.storeName, 'readonly')
+            const store = transaction.objectStore(this.storeName)
+            const request = store.get(key)
+            request.onsuccess = () => {
+              resolve(request.result !== undefined ? request.result : defaultValue)
+            }
+            request.onerror = () => resolve(defaultValue)
+          })
+        }
+
+        async set(key, value) {
+          await this.init()
+          return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(this.storeName, 'readwrite')
+            const store = transaction.objectStore(this.storeName)
+            const request = store.put(value, key)
+            request.onsuccess = () => resolve()
+            request.onerror = (e) => reject(e.target.error)
+          })
+        }
+
+        async remove(key) {
+          await this.init()
+          return new Promise((resolve, reject) => {
+            const transaction = this.db.transaction(this.storeName, 'readwrite')
+            const store = transaction.objectStore(this.storeName)
+            const request = store.delete(key)
+            request.onsuccess = () => resolve()
+            request.onerror = (e) => reject(e.target.error)
+          })
+        }
+      }
+
+      window.triggerRipple = (event, customColor = 'rgba(245, 158, 11, 0.3)') => {
+        const target = event.currentTarget
+        if (!target) return
+
+        const rect = target.getBoundingClientRect()
+        const x = event.clientX - rect.left
+        const y = event.clientY - rect.top
+
+        const ripple = document.createElement('span')
+        ripple.className = 'click-ripple'
+        ripple.style.left = `${x}px`
+        ripple.style.top = `${y}px`
+        ripple.style.background = customColor
+
+        target.appendChild(ripple)
+
+        anime({
+          targets: ripple,
+          scale: [0, 4],
+          opacity: [1, 0],
+          duration: 550,
+          easing: 'easeOutQuart',
+          complete: () => {
+            ripple.remove()
+          },
+        })
+      }
+
+      const dbStore = new IndexedDBStore()
+
+      // Define Zebar Providers
+      const providers = zebar.createProviderGroup({
+        network: { type: 'network' },
+        glazewm: { type: 'glazewm' },
+        cpu: { type: 'cpu' },
+        date: { type: 'date', formatting: 'EEE d MMM t' },
+        battery: { type: 'battery' },
+        memory: { type: 'memory' },
+        weather: { type: 'weather' },
+        media: { type: 'media' },
+      })
+      // Custom Hook to expose a single unified system data stream with requestAnimationFrame batching
+      const useSystemData = () => {
+        const [output, setOutput] = useState(providers.outputMap)
+        useEffect(() => {
+          let frameId = null
+          const handleOutput = () => {
+            if (frameId) return
+            frameId = requestAnimationFrame(() => {
+              setOutput({ ...providers.outputMap })
+              frameId = null
+            })
+          }
+          const unsubscribe = providers.onOutput(handleOutput)
+          return () => {
+            unsubscribe()
+            if (frameId) cancelAnimationFrame(frameId)
+          }
+        }, [])
+        return output
+      }
+
+      // Reusable Status Pill Component
+      const StatusPill = ({
+        icon,
+        value,
+        className,
+        style,
+        extraContent,
+        appendContent,
+        accessoryIcon,
+        ...props
+      }) => {
+        const handleMouseMove = (e) => {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const x = (e.clientX - rect.left - rect.width / 2) * 0.1
+          const y = (e.clientY - rect.top - rect.height / 2) * 0.2
+          e.currentTarget.style.setProperty('--magnet-x', `${x}px`)
+          e.currentTarget.style.setProperty('--magnet-y', `${y}px`)
+        }
+        const handleMouseLeave = (e) => {
+          e.currentTarget.style.setProperty('--magnet-x', '0px')
+          e.currentTarget.style.setProperty('--magnet-y', '0px')
+        }
+
+        return (
+          <div
+            className="status-pill-container"
+            style={style}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            <div
+              className={`status-pill ${className || ''}`}
+              {...props}
+              onClick={(e) => {
+                window.triggerRipple(e)
+                if (props.onClick) props.onClick(e)
+              }}
+            >
+              {extraContent}
+              <i className={`nf ${icon}`}></i>
+              {value && <span className="value">{value}</span>}
+              {appendContent}
+              {accessoryIcon && <i className={`nf ${accessoryIcon} accessory-icon`}></i>}
+            </div>
+          </div>
+        )
+      }
+
+      // Network Widget Component (with 500ms Debounced Polling, caching, and log2 optimization)
+      const NetworkWidget = React.memo(
+        ({ network }) => {
+          if (!network) return null
+
+          const [isHovered, setIsHovered] = useState(false)
+          const [traffic, setTraffic] = useState({
+            transmit: network.traffic?.transmit || 0,
+            receive: network.traffic?.receive || 0,
+          })
+
+          // Debounce network updates to 500ms
+          useEffect(() => {
+            const handle = setInterval(() => {
+              setTraffic({
+                transmit: network.traffic?.transmit || 0,
+                receive: network.traffic?.receive || 0,
+              })
+            }, 500)
+            return () => clearInterval(handle)
+          }, [network])
+
+          // Super fast bitwise-aligned byte conversion using Math.log2
+          const formatBytes = (bytes) => {
+            if (bytes === 0 || !bytes) return '0 B/s'
+            const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+            const i = Math.floor(Math.log2(bytes) / 10)
+            const k = Math.pow(1024, i)
+            return parseFloat((bytes / k).toFixed(1)) + ' ' + (sizes[i] || 'B/s')
+          }
+
+          const tx = traffic.transmit
+          const rx = traffic.receive
+
+          // Cache formatted speeds to bypass recalculations
+          const formattedRx = useMemo(() => formatBytes(rx), [rx])
+          const formattedTx = useMemo(() => formatBytes(tx), [tx])
+
+          const getNetworkIcon = (networkOutput) => {
+            if (networkOutput.vpnConnections?.length > 0) return 'nf-md-vpn'
+            if (!networkOutput.defaultInterface) return 'nf-md-wifi_strength_off_outline'
+            if (networkOutput.defaultInterface.type === 'ethernet') return 'nf-md-ethernet_cable'
+            const signal = networkOutput.defaultGateway?.signalStrength || 0
+            if (signal > 80) return 'nf-md-wifi_strength_4'
+            if (signal > 60) return 'nf-md-wifi_strength_3'
+            if (signal > 40) return 'nf-md-wifi_strength_2'
+            if (signal > 20) return 'nf-md-wifi_strength_1'
+            return 'nf-md-wifi_strength_outline'
+          }
+
+          const signalStrength = network.defaultGateway?.signalStrength || 0
+          const networkColor =
+            signalStrength > 70
+              ? 'var(--ctp-mocha-green)'
+              : signalStrength > 40
+                ? 'var(--ctp-mocha-yellow)'
+                : 'var(--ctp-mocha-peach)'
+
+          return (
+            <div
+              className={`network ${isHovered ? 'expanded' : ''}`}
+              style={{ '--network-signal-color': networkColor }}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+            >
+              <i className={`nf ${getNetworkIcon(network)}`}></i>
+              <span className="network-ssid">{network.defaultGateway?.ssid}</span>
+              <span className={`network-traffic ${isHovered ? 'visible' : ''}`}>
+                ↓ {formattedRx} ↑ {formattedTx}
+              </span>
+            </div>
+          )
+        },
+        (prev, next) => {
+          if (!prev.network || !next.network) return prev.network === next.network
+          return prev.network.defaultGateway?.ssid === next.network.defaultGateway?.ssid
+        },
+      )
+
+      // Memory Widget Component
+      const MemoryWidget = React.memo(
+        ({ memory }) => {
+          if (!memory) return null
+
+          const usage = Math.round(memory.usage)
+          const memoryColor =
+            usage > 85
+              ? 'var(--kawaii-peach)'
+              : usage > 70
+                ? 'var(--kawaii-yellow)'
+                : 'var(--kawaii-teal)'
+
+          return (
+            <StatusPill
+              className="memory"
+              icon="nf-fae-chip"
+              value={`${usage}%`}
+              style={{ '--pill-color': memoryColor }}
+            />
+          )
+        },
+        (prev, next) => Math.round(prev.memory?.usage || 0) === Math.round(next.memory?.usage || 0),
+      )
+
+      // Cyber-Pet / Tamagotchi Widget Component
+      const CyberPetWidget = React.memo(
+        ({ cpu, memory }) => {
+          if (!cpu || !memory) return null
+
+          const cpuUsage = Math.round(cpu.usage)
+          const memUsage = Math.round(memory.usage)
+
+          let icon = 'nf-md-cat'
+          let color = 'var(--kawaii-teal)'
+
+          if (cpuUsage > 80 || memUsage > 90) {
+            icon = 'nf-md-emoticon_sweat'
+            color = 'var(--kawaii-peach)'
+          } else if (cpuUsage > 60 || memUsage > 75) {
+            icon = 'nf-md-emoticon_neutral'
+            color = 'var(--kawaii-yellow)'
+          } else if (cpuUsage < 10 && memUsage < 50) {
+            icon = 'nf-md-sleep'
+            color = 'var(--kawaii-lavender)'
+          }
+
+          return (
+            <StatusPill
+              className="cyber-pet"
+              icon={icon}
+              value={cpuUsage > 80 ? 'HOT' : cpuUsage < 10 ? 'Zzz' : 'UwU'}
+              style={{ '--pill-color': color }}
+              accessoryIcon="nf-md-heart"
+            />
+          )
+        },
+        (prev, next) =>
+          Math.round(prev.cpu?.usage || 0) === Math.round(next.cpu?.usage || 0) &&
+          Math.round(prev.memory?.usage || 0) === Math.round(next.memory?.usage || 0),
+      )
+
+      // CPU Widget Component
+      const CpuWidget = React.memo(
+        ({ cpu }) => {
+          if (!cpu) return null
+
+          const usage = Math.round(cpu.usage)
+          return (
+            <StatusPill
+              className="cpu"
+              icon="nf-oct-cpu"
+              value={`${usage}%`}
+              style={{ '--pill-color': usage > 85 ? 'var(--kawaii-peach)' : 'var(--kawaii-green)' }}
+            />
+          )
+        },
+        (prev, next) => Math.round(prev.cpu?.usage || 0) === Math.round(next.cpu?.usage || 0),
+      )
+
+      // Battery Widget Component (with robust AC/charging detection and special icons/indicators)
+      const BatteryWidget = React.memo(
+        ({ battery: zebarBattery }) => {
+          const [isHovered, setIsHovered] = useState(false)
+          const [fallbackBattery, setFallbackBattery] = useState(null)
+
+          useEffect(() => {
+            if (zebarBattery) return
+
+            let active = true
+            if (navigator.getBattery) {
+              navigator.getBattery().then((bat) => {
+                if (!active) return
+
+                const updateBattery = () => {
+                  setFallbackBattery({
+                    chargePercent: bat.level * 100,
+                    isCharging: bat.charging,
+                    state: bat.charging ? 'charging' : 'discharging',
+                  })
+                }
+
+                updateBattery()
+
+                bat.addEventListener('chargingchange', updateBattery)
+                bat.addEventListener('levelchange', updateBattery)
+
+                return () => {
+                  active = false
+                  bat.removeEventListener('chargingchange', updateBattery)
+                  bat.removeEventListener('levelchange', updateBattery)
+                }
+              })
+            }
+          }, [zebarBattery])
+
+          const battery = zebarBattery || fallbackBattery
+
+          console.log('Battery Object in Widget:', battery)
+
+          if (!battery) return null
+
+          try {
+            const stateLower = String(battery.state || '').toLowerCase()
+            const isCharging =
+              battery.isCharging === true ||
+              String(battery.isCharging).toLowerCase() === 'true' ||
+              stateLower === 'charging' ||
+              stateLower === 'ac' ||
+              stateLower === 'full' ||
+              stateLower === 'fullycharged' ||
+              stateLower === 'fully charged'
+
+            const getBatteryStatusClass = (chargePercent, chargingState) => {
+              if (chargingState) return 'battery-charging'
+              if (chargePercent <= 15) return 'battery-critical'
+              if (chargePercent <= 25) return 'battery-warning'
+              return 'battery-high'
+            }
+
+            const getBatteryIcon = (chargePercent, chargingState) => {
+              if (chargingState) {
+                if (chargePercent > 90) return 'nf-md-battery_charging_100'
+                if (chargePercent > 70) return 'nf-md-battery_charging_80'
+                if (chargePercent > 40) return 'nf-md-battery_charging_60'
+                if (chargePercent > 20) return 'nf-md-battery_charging_30'
+                return 'nf-md-battery_charging_outline'
+              }
+              if (chargePercent > 90) return 'nf-fa-battery_4'
+              if (chargePercent > 70) return 'nf-fa-battery_3'
+              if (chargePercent > 40) return 'nf-fa-battery_2'
+              if (chargePercent > 20) return 'nf-fa-battery_1'
+              return 'nf-fa-battery_0'
+            }
+
+            const chargeStatus = isCharging ? 'Charging' : 'Discharging'
+            const tooltipText = `${chargeStatus} (${Math.round(battery.chargePercent)}%)`
+
+            const valueText = isCharging
+              ? `⚡ ${Math.round(battery.chargePercent)}%`
+              : `${Math.round(battery.chargePercent)}%`
+
+            return (
+              <div onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+                <StatusPill
+                  className={`battery no-peel ${isHovered ? 'expanded' : ''}`}
+                  icon={getBatteryIcon(battery.chargePercent, isCharging)}
+                  style={{ '--charge-level': `${battery.chargePercent}%` }}
+                  appendContent={
+                    <span className="battery-text-container">
+                      <span className={`battery-value-text ${isHovered ? 'hidden' : ''}`}>
+                        {valueText}
+                      </span>
+                      <span className={`battery-tooltip-text ${isHovered ? 'visible' : ''}`}>
+                        {tooltipText}
+                      </span>
+                    </span>
+                  }
+                  extraContent={
+                    <>
+                      <div className="battery-liquid-container">
+                        <div
+                          className={`battery-liquid ${getBatteryStatusClass(battery.chargePercent, isCharging)}`}
+                        ></div>
+                      </div>
+                      {isCharging && (
+                        <i className="nf nf-md-power_plug charging-icon" style={{ zIndex: 1 }}></i>
+                      )}
+                    </>
+                  }
+                />
+              </div>
+            )
+          } catch (err) {
+            console.error('BatteryWidget render error:', err)
+            return (
+              <div className="status-pill" style={{ '--pill-color': 'var(--ctp-mocha-red)' }}>
+                <i className="nf nf-md-alert_circle"></i>
+                <span className="value">Battery Error</span>
+              </div>
+            )
+          }
+        },
+        (prev, next) =>
+          prev.battery?.chargePercent === next.battery?.chargePercent &&
+          prev.battery?.isCharging === next.battery?.isCharging &&
+          prev.battery?.state === next.battery?.state,
+      )
+
+      // Static mapping of weather statuses to icons (placed outside the render loop to optimize GC cycles)
+      const WEATHER_ICONS_MAP = {
+        clear_day: 'nf-weather-day_sunny',
+        clear_night: 'nf-weather-night_clear',
+        cloudy_day: 'nf-weather-day_cloudy',
+        cloudy_night: 'nf-weather-night_alt_cloudy',
+        light_rain_day: 'nf-weather-day_sprinkle',
+        light_rain_night: 'nf-weather-night_alt_sprinkle',
+        heavy_rain_day: 'nf-weather-day_rain',
+        heavy_rain_night: 'nf-weather-night_alt_rain',
+        snow_day: 'nf-weather-day_snow',
+        snow_night: 'nf-weather-night_alt_snow',
+        thunder_day: 'nf-weather-day_lightning',
+        thunder_night: 'nf-weather-night_alt_lightning',
+      }
+
+      // Weather Widget Component
+      const WeatherWidget = React.memo(
+        ({ weather }) => {
+          if (!weather) return null
+
+          return (
+            <StatusPill
+              className="weather"
+              icon={WEATHER_ICONS_MAP[weather.status] || 'nf-weather-na'}
+              value={`${Math.round(weather.celsiusTemp)}°C`}
+            />
+          )
+        },
+        (prev, next) =>
+          prev.weather?.celsiusTemp === next.weather?.celsiusTemp &&
+          prev.weather?.status === next.weather?.status,
+      )
+
+      // Workspace Widget Component (with deep structural comparison to bypass redundant render sweeps)
+      const WorkspaceWidget = React.memo(
+        ({ glazewm }) => {
+          if (!glazewm) return null
+
+          const containerRef = useRef(null)
+          const indicatorRef = useRef(null)
+
+          const focusedWorkspaceName = useMemo(() => {
+            return glazewm.currentWorkspaces.find((w) => w.hasFocus)?.name
+          }, [glazewm.currentWorkspaces])
+
+          useEffect(() => {
+            if (!containerRef.current || !indicatorRef.current || !focusedWorkspaceName) return
+
+            // Query the DOM for the newly focused workspace button
+            const activeBtn = containerRef.current.querySelector('.workspace.focused')
+            if (!activeBtn) return
+
+            const activeRect = activeBtn.getBoundingClientRect()
+            const containerRect = containerRef.current.getBoundingClientRect()
+
+            const leftOffset = activeRect.left - containerRect.left
+            const width = activeRect.width
+
+            // Animate indicator positions with liquid squish/stretch
+            anime.remove(indicatorRef.current)
+            anime({
+              targets: indicatorRef.current,
+              left: `${leftOffset}px`,
+              width: `${width}px`,
+              scaleX: [1, 1.25, 1],
+              skewX: [0, 10, 0],
+              duration: 750,
+              easing: 'easeOutElastic(1, 0.7)',
+            })
+          }, [focusedWorkspaceName])
+
+          return (
+            <div ref={containerRef} className="workspaces">
+              <div ref={indicatorRef} className="workspace-liquid-indicator" />
+              {glazewm.currentWorkspaces.map((workspace) => (
+                <button
+                  className={`workspace ${workspace.hasFocus && 'focused'} ${workspace.isDisplayed && 'displayed'}`}
+                  onClick={(e) => {
+                    window.playRetroSound()
+                    window.triggerRipple(e, 'rgba(245, 158, 11, 0.3)')
+                    glazewm.runCommand(`focus --workspace ${workspace.name}`)
+                  }}
+                  key={workspace.name}
+                >
+                  <span className="workspace-text">{workspace.displayName ?? workspace.name}</span>
+                </button>
+              ))}
+            </div>
+          )
+        },
+        (prev, next) => {
+          if (!prev.glazewm || !next.glazewm) return prev.glazewm === next.glazewm
+          const p = prev.glazewm.currentWorkspaces
+          const n = next.glazewm.currentWorkspaces
+          if (p.length !== n.length) return false
+          for (let i = 0; i < p.length; i++) {
+            if (
+              p[i].name !== n[i].name ||
+              p[i].hasFocus !== n[i].hasFocus ||
+              p[i].isDisplayed !== n[i].isDisplayed ||
+              p[i].displayName !== n[i].displayName
+            ) {
+              return false
+            }
+          }
+          return true
+        },
+      )
+
+      // Binding Mode Button Component with premium fast scale-up and fade-in entry animation
+      const BindingModeBtn = React.memo(({ bindingMode, runCommand }) => {
+        const ref = useRef(null)
+
+        useEffect(() => {
+          if (!ref.current) return
+          anime({
+            targets: ref.current,
+            scale: [0.85, 1],
+            opacity: [0, 1],
+            duration: 350,
+            easing: 'easeOutQuart',
+          })
+        }, [])
+
+        return (
+          <button
+            ref={ref}
+            className="binding-mode"
+            onClick={() => runCommand(`wm-disable-binding-mode --name ${bindingMode.name}`)}
+            style={{ transformOrigin: 'center', opacity: 0 }}
+          >
+            {bindingMode.displayName ?? bindingMode.name}
+          </button>
+        )
+      })
+
+      // Tiling Direction Button Component with snappy 180 degree rotation
+      const TilingDirectionBtn = React.memo(({ tilingDirection, runCommand }) => {
+        const ref = useRef(null)
+        const prevDir = useRef(tilingDirection)
+
+        useEffect(() => {
+          if (!ref.current) return
+          if (prevDir.current !== tilingDirection) {
+            anime.remove(ref.current)
+            anime({
+              targets: ref.current,
+              rotate: tilingDirection === 'horizontal' ? [180, 360] : [0, 180],
+              duration: 450,
+              easing: 'cubicBezier(0.16, 1, 0.3, 1)', // Snappy ultra-premium ease-out expo
+            })
+            prevDir.current = tilingDirection
+          }
+        }, [tilingDirection])
+
+        return (
+          <button
+            ref={ref}
+            className={`tiling-direction nf ${
+              tilingDirection === 'horizontal' ? 'nf-md-swap_horizontal' : 'nf-md-swap_vertical'
+            }`}
+            onClick={() => runCommand('toggle-tiling-direction')}
+            style={{ transformOrigin: 'center' }}
+          ></button>
+        )
+      })
+
+      // GlazeWM Control Actions Widget (fully memoized to completely avoid GC allocations during normal runtime)
+      const GlazeControlsWidget = React.memo(
+        ({ glazewm }) => {
+          if (!glazewm) return null
+
+          return (
+            <>
+              {glazewm.isPaused && (
+                <button
+                  className="paused-button"
+                  onClick={() => glazewm.runCommand('wm-toggle-pause')}
+                >
+                  PAUSED
+                </button>
+              )}
+              {glazewm.bindingModes.map((bindingMode) => (
+                <BindingModeBtn
+                  key={bindingMode.name}
+                  bindingMode={bindingMode}
+                  runCommand={glazewm.runCommand}
+                />
+              ))}
+
+              <TilingDirectionBtn
+                tilingDirection={glazewm.tilingDirection}
+                runCommand={glazewm.runCommand}
+              />
+            </>
+          )
+        },
+        (prev, next) => {
+          if (!prev.glazewm || !next.glazewm) return prev.glazewm === next.glazewm
+          const p = prev.glazewm
+          const n = next.glazewm
+          if (p.isPaused !== n.isPaused) return false
+          if (p.tilingDirection !== n.tilingDirection) return false
+          if (p.bindingModes.length !== n.bindingModes.length) return false
+          for (let i = 0; i < p.bindingModes.length; i++) {
+            if (
+              p.bindingModes[i].name !== n.bindingModes[i].name ||
+              p.bindingModes[i].displayName !== n.bindingModes[i].displayName
+            ) {
+              return false
+            }
+          }
+          return true
+        },
+      )
+
+      // Isolated Clock Widget Component (prevents main parent DOM sweeps on second updates)
+      const ClockWidget = React.memo(
+        ({ date }) => {
+          if (!date) return null
+          return (
+            <StatusPill
+              className="clock-capsule"
+              icon="nf-md-clock_outline"
+              value={date.formatted}
+            />
+          )
+        },
+        (prev, next) => prev.date?.formatted === next.date?.formatted,
+      )
+
+      // Helper function for ultra-fast 1-pixel HTML5 canvas dominant color average extraction
+      const extractDominantColor = (imgUrl) => {
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.crossOrigin = 'Anonymous'
+          img.onload = () => {
+            try {
+              const canvas = document.createElement('canvas')
+              canvas.width = 1
+              canvas.height = 1
+              const ctx = canvas.getContext('2d')
+              ctx.drawImage(img, 0, 0, 1, 1)
+              const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
+              // Translucent overlay color for high contrast premium CRT background glows
+              resolve(`rgba(${r}, ${g}, ${b}, 0.22)`)
+            } catch (e) {
+              resolve('rgba(255, 255, 255, 0.03)')
+            }
+          }
+          img.onerror = () => resolve('rgba(255, 255, 255, 0.03)')
+          img.src = imgUrl
+        })
+      }
+
+      // Helper function to clean up artist and track titles from streaming platform noise
+      const cleanMetadata = (text) => {
+        if (!text) return ''
+        // Split by Em-dash, En-dash, or a space-hyphen-space separator to isolate primary artist/track
+        let cleaned = text.split(/\s*[\u2014\u2013]\s*|\s+-\s+/)[0]
+
+        // Strip bracketed features or formats, e.g. (feat. ...), [Official Video]
+        cleaned = cleaned.replace(/\s*[\(\[][fF]eat\..*?[\)\]]/g, '')
+        cleaned = cleaned.replace(/\s*[\(\[][fF]t\..*?[\)\]]/g, '')
+        cleaned = cleaned.replace(/\s*[\(\[][oO]fficial.*?[\)\]]/g, '')
+        cleaned = cleaned.replace(/\s*-\s*Remastered.*/gi, '')
+        cleaned = cleaned.replace(/\s*[\(\[]Remastered.*?[\)\]]/gi, '')
+        cleaned = cleaned.replace(/\s*-\s*Single\s+Version/gi, '')
+        cleaned = cleaned.replace(/\s*-\s*Radio\s+Edit/gi, '')
+
+        return cleaned.trim()
+      }
+
+      // Memoized Media & Marquee Track Widget (isolates layout bounds and scroll calculations)
+      const MediaWidget = React.memo(
+        ({ media }) => {
+          if (!media?.currentSession) return null
+
+          const containerRef = useRef(null)
+          const textRef = useRef(null)
+          const [isHovered, setIsHovered] = useState(false)
+          const [shouldScroll, setShouldScroll] = useState(false)
+          const speedRef = useRef(0.5)
+          const posXRef = useRef(0)
+
+          // Last.fm Integration States
+          const [lastfmUsername, setLastfmUsername] = useState('')
+          const [lastfmApiKey, setLastfmApiKey] = useState('')
+          const [albumCover, setAlbumCover] = useState(null)
+          const [playCount, setPlayCount] = useState(null)
+          const [todayScrobbles, setTodayScrobbles] = useState(null)
+          const [showTodayScrobbles, setShowTodayScrobbles] = useState(false)
+          const [isInlineSettingsOpen, setIsInlineSettingsOpen] = useState(false)
+          const [dominantColor, setDominantColor] = useState('rgba(255, 255, 255, 0.03)')
+          const [usernameInput, setUsernameInput] = useState('')
+          const [apiKeyInput, setApiKeyInput] = useState('')
+
+          // Load credentials from IndexedDB on startup
+          useEffect(() => {
+            const loadSettings = async () => {
+              const user = await dbStore.get('lastfm_username', '')
+              const key = await dbStore.get('lastfm_api_key', '')
+              setLastfmUsername(user)
+              setLastfmApiKey(key)
+              setUsernameInput(user)
+              setApiKeyInput(key)
+            }
+            loadSettings()
+          }, [])
+
+          // Fetch artwork, playcount, and extract dominant color on track/credentials change
+          const fetchedTrackRef = useRef('')
+          const fetchedKeyRef = useRef('')
+          useEffect(() => {
+            const title = media.currentSession?.title
+            const artist = media.currentSession?.artist
+            if (!title || !artist) return
+
+            const cleanArtist = cleanMetadata(artist)
+            const cleanTitle = cleanMetadata(title)
+            const trackKey = `${cleanTitle}-${cleanArtist}`
+
+            // Only fetch if track or key has changed to prevent infinite-spamming rate limits
+            if (fetchedTrackRef.current === trackKey && fetchedKeyRef.current === lastfmApiKey)
+              return
+            fetchedTrackRef.current = trackKey
+            fetchedKeyRef.current = lastfmApiKey
+
+            const fetchTrackInfo = async () => {
+              if (!lastfmApiKey) {
+                setAlbumCover(null)
+                setPlayCount(null)
+                setDominantColor('rgba(255, 255, 255, 0.03)')
+                return
+              }
+
+              try {
+                console.log(
+                  `[Last.fm] Fetching track: "${cleanTitle}" by "${cleanArtist}" for user "${lastfmUsername}" (raw: "${title}" by "${artist}")`,
+                )
+                const url = `https://ws.audioscrobbler.com/2.0/?method=track.getInfo&api_key=${lastfmApiKey}&artist=${encodeURIComponent(cleanArtist)}&track=${encodeURIComponent(cleanTitle)}&username=${lastfmUsername}&format=json`
+                const res = await fetch(url)
+                const data = await res.json()
+                console.log('[Last.fm] Response data:', data)
+
+                if (data?.track) {
+                  const trackInfo = data.track
+                  const images = trackInfo.album?.image
+                  const cover = images?.[images.length - 1]?.['#text'] || null
+                  const pc = trackInfo.userplaycount ? parseInt(trackInfo.userplaycount) : null
+
+                  setAlbumCover(cover)
+                  setPlayCount(pc)
+
+                  if (cover) {
+                    const color = await extractDominantColor(cover)
+                    setDominantColor(color)
+                  } else {
+                    setDominantColor('rgba(255, 255, 255, 0.03)')
+                  }
+
+                  // Celebrate Milestones with beautiful Toast and Canvas Confetti!
+                  if (pc && pc > 0) {
+                    const isMilestone = pc === 10 || pc === 50 || (pc > 0 && pc % 100 === 0)
+                    if (isMilestone && window.addToast && window.myConfetti) {
+                      window.addToast(
+                        `Milestone: ${pc} scrobbles for "${trackInfo.name}"!`,
+                        'nf-md-party_popper',
+                      )
+                      window.myConfetti({
+                        particleCount: 80,
+                        spread: 60,
+                        origin: { y: 0.6 },
+                        colors: [
+                          '#f5e0dc',
+                          '#f2cdcd',
+                          '#f5c2e7',
+                          '#cba6f7',
+                          '#89b4fa',
+                          '#a6e3a1',
+                          '#94e2d5',
+                        ],
+                      })
+                    }
+                  }
+                } else {
+                  if (data?.error) {
+                    console.error('[Last.fm] API Error:', data.message || data.error)
+                  }
+                  setAlbumCover(null)
+                  setPlayCount(null)
+                  setDominantColor('rgba(255, 255, 255, 0.03)')
+                }
+              } catch (err) {
+                console.error('[Last.fm] Error fetching track details:', err)
+                setAlbumCover(null)
+                setPlayCount(null)
+                setDominantColor('rgba(255, 255, 255, 0.03)')
+              }
+            }
+
+            fetchTrackInfo()
+          }, [
+            media.currentSession?.title,
+            media.currentSession?.artist,
+            lastfmApiKey,
+            lastfmUsername,
+          ])
+
+          // Fetch today's scrobbles
+          const fetchTodayScrobbles = async () => {
+            if (!lastfmApiKey || !lastfmUsername) return
+            try {
+              const midnight = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000)
+              const url = `https://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${lastfmUsername}&api_key=${lastfmApiKey}&from=${midnight}&limit=1&format=json`
+              const res = await fetch(url)
+              const data = await res.json()
+              if (data?.recenttracks?.['@attr']?.total) {
+                setTodayScrobbles(parseInt(data.recenttracks['@attr'].total))
+              } else {
+                setTodayScrobbles(0)
+              }
+            } catch (err) {
+              console.error('Error fetching today scrobbles:', err)
+            }
+          }
+
+          const handleStatsRightClick = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            if (!showTodayScrobbles) {
+              fetchTodayScrobbles()
+            }
+            setShowTodayScrobbles(!showTodayScrobbles)
+          }
+
+          const handleSaveSettings = async (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            await dbStore.set('lastfm_username', usernameInput)
+            await dbStore.set('lastfm_api_key', apiKeyInput)
+            setLastfmUsername(usernameInput)
+            setLastfmApiKey(apiKeyInput)
+            setIsInlineSettingsOpen(false)
+            if (window.addToast) {
+              window.addToast('Last.fm credentials saved!', 'nf-md-check_circle')
+            }
+          }
+
+          const toggleSettings = (e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            setIsInlineSettingsOpen(!isInlineSettingsOpen)
+          }
+
+          // Measure overflow to decide if marquee scrolling is needed
+          useEffect(() => {
+            if (!textRef.current) return
+            const checkOverflow = () => {
+              if (!textRef.current) return
+              const wrapper = textRef.current.parentElement
+              if (!wrapper) return
+              const wrapperWidth = wrapper.offsetWidth
+              const singleWidth = shouldScroll
+                ? textRef.current.scrollWidth / 2
+                : textRef.current.scrollWidth
+
+              setShouldScroll(singleWidth > wrapperWidth)
+            }
+
+            const timer = setTimeout(checkOverflow, 100)
+            window.addEventListener('resize', checkOverflow)
+            return () => {
+              clearTimeout(timer)
+              window.removeEventListener('resize', checkOverflow)
+            }
+          }, [
+            media.currentSession?.title,
+            media.currentSession?.artist,
+            isHovered,
+            shouldScroll,
+            isInlineSettingsOpen,
+          ])
+
+          // Deceleration tick loop for smooth marquee scrolling
+          useEffect(() => {
+            if (!shouldScroll || isInlineSettingsOpen) {
+              posXRef.current = 0
+              if (textRef.current) textRef.current.style.transform = `translateX(0px)`
+              return
+            }
+
+            let animId
+            let lastTime = performance.now()
+            const tick = (now) => {
+              if (!textRef.current) return
+
+              const textWidth = textRef.current.scrollWidth / 2
+              const dt = (now - lastTime) / 16.666
+
+              if (isHovered) {
+                speedRef.current *= Math.pow(0.92, dt)
+              } else {
+                const baseSpeed = 0.5
+                speedRef.current = speedRef.current * Math.pow(0.9, dt) + baseSpeed * 0.1 * dt
+              }
+
+              posXRef.current -= speedRef.current * dt
+              if (posXRef.current <= -textWidth) {
+                posXRef.current += textWidth
+              }
+
+              textRef.current.style.transform = `translateX(${posXRef.current}px)`
+              lastTime = now
+              animId = requestAnimationFrame(tick)
+            }
+
+            animId = requestAnimationFrame(tick)
+            return () => cancelAnimationFrame(animId)
+          }, [isHovered, shouldScroll, isInlineSettingsOpen])
+
+          const trackString = `${media.currentSession.title} - ${media.currentSession.artist}    •    `
+
+          // Progress calculations for RPG Life-bar
+          const position = media.currentSession?.position || 0
+          const duration = media.currentSession?.duration || 1
+          const progressPercent = Math.min(100, Math.max(0, (position / duration) * 100))
+          const isFavorite = playCount && playCount >= 50
+
+          return (
+            <div
+              ref={containerRef}
+              className={`media-marquee-container ${isFavorite ? 'favorite-glow' : ''}`}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              style={{
+                '--album-dominant-color': dominantColor,
+              }}
+            >
+              {/* 4. Hover Media Controls (⏮ ⏸ ⏭) */}
+              <div className="media-controls">
+                <i
+                  className="nf nf-md-skip_previous"
+                  onClick={(e) => {
+                    window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
+                    media.previous?.()
+                  }}
+                  title="Previous"
+                ></i>
+                <div
+                  className="media-play-pause-btn"
+                  onClick={(e) => {
+                    window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
+                    media.togglePlayPause?.()
+                  }}
+                  title="Play/Pause"
+                >
+                  <i
+                    className={`nf nf-md-pause pause-icon ${media.currentSession?.isPlaying ? 'visible' : 'hidden'}`}
+                  ></i>
+                  <i
+                    className={`nf nf-md-play play-icon ${!media.currentSession?.isPlaying ? 'visible' : 'hidden'}`}
+                  ></i>
+                </div>
+                <i
+                  className="nf nf-md-skip_next"
+                  onClick={(e) => {
+                    window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
+                    media.next?.()
+                  }}
+                  title="Next"
+                ></i>
+              </div>
+
+              {/* 1. Scrobble Stats Badge */}
+              {lastfmApiKey && (
+                <div
+                  className="scrobble-stats-badge"
+                  onContextMenu={handleStatsRightClick}
+                  onClick={() => setShowTodayScrobbles(!showTodayScrobbles)}
+                  title="Click: Toggle | Right-Click: Today's scrobbles"
+                >
+                  {showTodayScrobbles ? (
+                    <>
+                      <i className="nf nf-md-calendar_today"></i>
+                      <span>{todayScrobbles !== null ? todayScrobbles : '...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <i className="nf nf-md-fire"></i>
+                      <span>{playCount !== null ? playCount : '0'}</span>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* 2. Rotating Vinyl Record Art (replacing .media-icon) */}
+              {lastfmApiKey ? (
+                <div
+                  className={`vinyl-wrapper media-icon ${media.currentSession?.isPlaying ? 'spinning' : 'paused'}`}
+                  onContextMenu={toggleSettings}
+                  title="Right-click to configure Last.fm"
+                >
+                  {albumCover ? (
+                    <img src={albumCover} className="vinyl-cover" alt="album art" />
+                  ) : (
+                    <div className="vinyl-placeholder">
+                      <i className="nf nf-md-music_note" style={{ marginRight: 0 }}></i>
+                    </div>
+                  )}
+                  <div className="vinyl-center-pin"></div>
+                </div>
+              ) : (
+                <i className="nf nf-md-music_note media-icon" onContextMenu={toggleSettings}></i>
+              )}
+
+              {/* 3. Sliding Marquee VS Inline Settings Form */}
+              {!isInlineSettingsOpen ? (
+                <div
+                  className="marquee-wrapper"
+                  onContextMenu={toggleSettings}
+                  title="Right click to configure Last.fm"
+                  style={{ cursor: 'pointer' }}
+                >
+                  <span
+                    ref={textRef}
+                    className="media-marquee-text"
+                    style={{
+                      transform: `translateX(${posXRef.current}px)`,
+                      animation: 'none',
+                      display: 'inline-block',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {shouldScroll ? (
+                      <>
+                        {trackString}
+                        {trackString}
+                      </>
+                    ) : (
+                      `${media.currentSession.title} - ${media.currentSession.artist}`
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <form
+                  className="media-inline-settings-form"
+                  onSubmit={handleSaveSettings}
+                  onContextMenu={toggleSettings}
+                  title="Right click to close"
+                >
+                  <input
+                    type="text"
+                    placeholder="User"
+                    value={usernameInput}
+                    onChange={(e) => setUsernameInput(e.target.value)}
+                    required
+                  />
+                  <input
+                    type="password"
+                    placeholder="API Key"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    required
+                  />
+                  <button type="submit" className="save-settings-btn">
+                    <i className="nf nf-md-content_save"></i>
+                  </button>
+                </form>
+              )}
+
+              {/* 5. RPG-Style "Life-Bar" */}
+              <div className="rpg-life-bar-container">
+                <div
+                  className={`rpg-life-bar ${isFavorite ? 'favorite-neon-pulsing' : 'standard-gray-flow'}`}
+                  style={{ width: `${progressPercent}%` }}
+                ></div>
+              </div>
+            </div>
+          )
+        },
+        (prev, next) => {
+          if (!prev.media?.currentSession || !next.media?.currentSession) {
+            return prev.media?.currentSession === next.media?.currentSession
+          }
+          const p = prev.media.currentSession
+          const n = next.media.currentSession
+          return (
+            p.title === n.title &&
+            p.artist === n.artist &&
+            p.isPlaying === n.isPlaying &&
+            Math.floor((p.position || 0) / 1000) === Math.floor((n.position || 0) / 1000)
+          )
+        },
+      )
+
+      // Hidden Weather Preloader Component to force icon cache & avoid flickers
+      const WeatherPreloader = () => {
+        const weatherIcons = [
+          'nf-weather-day_sunny',
+          'nf-weather-night_clear',
+          'nf-weather-day_cloudy',
+          'nf-weather-night_alt_cloudy',
+          'nf-weather-day_sprinkle',
+          'nf-weather-night_alt_sprinkle',
+          'nf-weather-day_rain',
+          'nf-weather-night_alt_rain',
+          'nf-weather-day_snow',
+          'nf-weather-night_alt_snow',
+          'nf-weather-day_lightning',
+          'nf-weather-night_alt_lightning',
+        ]
+        return (
+          <div
+            style={{
+              position: 'absolute',
+              width: 0,
+              height: 0,
+              overflow: 'hidden',
+              opacity: 0,
+              pointerEvents: 'none',
+            }}
+          >
+            {weatherIcons.map((icon) => (
+              <i key={icon} className={`nf ${icon}`}></i>
+            ))}
+          </div>
+        )
+      }
+
+      // Pomodoro Widget Component (Memoized & fully powered by IndexedDB asinkron!)
+      const PomodoroWidget = React.memo(() => {
+        const [workTime, setWorkTime] = useState(25 * 60)
+        const [breakTime, setBreakTime] = useState(5 * 60)
+        const [autoStartBreak, setAutoStartBreak] = useState(false)
+        const [breakGap, setBreakGap] = useState(15) // seconds
+
+        const [timeLeft, setTimeLeft] = useState(25 * 60)
+        const [mode, setMode] = useState('work') // 'work', 'gap', 'break'
+        const [isActive, setIsActive] = useState(false)
+        const [isDialogOpen, setIsDialogOpen] = useState(false)
+
+        // Load settings asynchronously from IndexedDB
+        useEffect(() => {
+          const loadSettings = async () => {
+            const sWork = await dbStore.get('pomodoro_setting_work')
+            const sBreak = await dbStore.get('pomodoro_setting_break')
+            const sAuto = await dbStore.get('pomodoro_setting_auto')
+            const sGap = await dbStore.get('pomodoro_setting_gap')
+
+            if (sWork) setWorkTime(parseInt(sWork))
+            if (sBreak) setBreakTime(parseInt(sBreak))
+            if (sAuto !== undefined) setAutoStartBreak(sAuto === 'true' || sAuto === true)
+            if (sGap) setBreakGap(parseInt(sGap))
+
+            const savedEndTime = await dbStore.get('pomodoro_end_time')
+            const savedMode = await dbStore.get('pomodoro_mode', 'work')
+            const savedIsActive =
+              (await dbStore.get('pomodoro_active')) === 'true' ||
+              (await dbStore.get('pomodoro_active')) === true
+
+            if (savedIsActive && savedEndTime) {
+              const remaining = Math.max(
+                0,
+                Math.floor((parseInt(savedEndTime) - Date.now()) / 1000),
+              )
+              if (remaining > 0) {
+                setTimeLeft(remaining)
+                setMode(savedMode)
+                setIsActive(true)
+              } else {
+                await dbStore.remove('pomodoro_active')
+              }
+            } else {
+              setMode(savedMode)
+              const baseTime =
+                savedMode === 'work'
+                  ? sWork
+                    ? parseInt(sWork)
+                    : 25 * 60
+                  : savedMode === 'gap'
+                    ? sGap
+                      ? parseInt(sGap)
+                      : 15
+                    : sBreak
+                      ? parseInt(sBreak)
+                      : 5 * 60
+              setTimeLeft(baseTime)
+            }
+          }
+          loadSettings()
+        }, [])
+
+        // Timer ticking loop
+        useEffect(() => {
+          let interval = null
+          if (isActive) {
+            interval = setInterval(() => {
+              setTimeLeft((prev) => {
+                if (prev <= 1) return 0
+                return prev - 1
+              })
+            }, 1000)
+          }
+          return () => {
+            if (interval) clearInterval(interval)
+          }
+        }, [isActive])
+
+        // Timer completion triggers
+        useEffect(() => {
+          if (timeLeft !== 0 || !isActive) return
+
+          const processCompletion = async () => {
+            let nextMode = 'work'
+            let nextTime = workTime
+            let nextActive = false
+
+            if (mode === 'work') {
+              if (window.addToast) window.addToast('Focus session complete!', 'nf-md-party_popper')
+
+              // High-performance background worker-thread canvas confetti burst!
+              if (window.myConfetti) {
+                window.myConfetti({
+                  particleCount: 100,
+                  spread: 70,
+                  origin: { y: 0.6 },
+                  colors: [
+                    '#f5e0dc',
+                    '#f2cdcd',
+                    '#f5c2e7',
+                    '#cba6f7',
+                    '#89b4fa',
+                    '#a6e3a1',
+                    '#94e2d5',
+                  ],
+                })
+              }
+
+              if (autoStartBreak) {
+                nextMode = 'gap'
+                nextTime = breakGap
+                nextActive = true
+              } else {
+                nextMode = 'break'
+                nextTime = breakTime
+                nextActive = false
+              }
+            } else if (mode === 'gap') {
+              nextMode = 'break'
+              nextTime = breakTime
+              nextActive = true
+            } else if (mode === 'break') {
+              if (window.addToast) window.addToast('Break over! Back to work.', 'nf-md-coffee')
+              nextMode = 'work'
+              nextTime = workTime
+              nextActive = false
+            }
+
+            setMode(nextMode)
+            setTimeLeft(nextTime)
+            setIsActive(nextActive)
+            await dbStore.set('pomodoro_mode', nextMode)
+            if (nextActive) {
+              await dbStore.set('pomodoro_end_time', (Date.now() + nextTime * 1000).toString())
+            } else {
+              await dbStore.remove('pomodoro_active')
+            }
+          }
+          processCompletion()
+        }, [timeLeft === 0, isActive])
+
+        const toggleTimer = async () => {
+          if (isDialogOpen) return
+          const newActive = !isActive
+          setIsActive(newActive)
+          if (newActive) {
+            await dbStore.set('pomodoro_end_time', (Date.now() + timeLeft * 1000).toString())
+            await dbStore.set('pomodoro_active', 'true')
+          } else {
+            await dbStore.remove('pomodoro_active')
+          }
+        }
+
+        const resetTimer = async (e) => {
+          e.preventDefault()
+          if (isDialogOpen) return
+          setIsActive(false)
+          const time = mode === 'work' ? workTime : mode === 'gap' ? breakGap : breakTime
+          setTimeLeft(time)
+          await dbStore.remove('pomodoro_active')
+        }
+
+        const openDialog = (e) => {
+          e.preventDefault()
+          setIsDialogOpen(!isDialogOpen)
+        }
+
+        useEffect(() => {
+          if (isDialogOpen) {
+            anime({
+              targets: '.inline-pomodoro-settings',
+              maxWidth: [0, 480],
+              opacity: [0, 1],
+              scale: [0.95, 1],
+              duration: 850,
+              easing: 'easeOutElastic(1, 0.75)',
+            })
+          } else {
+            anime({
+              targets: '.inline-pomodoro-settings',
+              maxWidth: [480, 0],
+              opacity: [1, 0],
+              scale: [1, 0.95],
+              duration: 350,
+              easing: 'easeOutQuad',
+            })
+          }
+        }, [isDialogOpen])
+
+        const formatTime = (seconds) => {
+          const m = Math.floor(seconds / 60)
+          const s = seconds % 60
+          return `${m}:${s < 10 ? '0' : ''}${s}`
+        }
+
+        const saveSettings = async (e) => {
+          e.preventDefault()
+          const data = new FormData(e.target)
+          const w = parseInt(data.get('work')) * 60
+          const b = parseInt(data.get('break')) * 60
+          const g = parseInt(data.get('gap'))
+          const auto = data.get('auto') === 'on'
+
+          setWorkTime(w)
+          setBreakTime(b)
+          setBreakGap(g)
+          setAutoStartBreak(auto)
+
+          await dbStore.set('pomodoro_setting_work', w.toString())
+          await dbStore.set('pomodoro_setting_break', b.toString())
+          await dbStore.set('pomodoro_setting_gap', g.toString())
+          await dbStore.set('pomodoro_setting_auto', auto.toString())
+
+          if (!isActive) {
+            const time = mode === 'work' ? w : mode === 'gap' ? g : b
+            setTimeLeft(time)
+          }
+
+          // Trigger rotating sage-green checkmark feedback sequence before drawer closes
+          const btn = e.target.querySelector('.dialog-save')
+          if (btn) {
+            btn.classList.add('success-mode')
+            btn.innerHTML = `<i class="nf nf-md-check_circle" style="transform: rotate(0deg); display: inline-block;"></i> Saved`
+
+            anime({
+              targets: btn.querySelector('i'),
+              rotate: 360,
+              duration: 800,
+              easing: 'easeOutElastic(1, 0.75)',
+            })
+          }
+
+          setTimeout(() => {
+            setIsDialogOpen(false)
+            if (btn) {
+              btn.classList.remove('success-mode')
+              btn.innerHTML = 'Save'
+            }
+          }, 900)
+        }
+
+        const getIcon = () => {
+          if (mode === 'gap') return 'nf-md-timer_sand'
+          return mode === 'work' ? 'nf-md-timer' : 'nf-md-coffee'
+        }
+
+        const getEnergyLevel = () => {
+          if (mode === 'work') return (timeLeft / workTime) * 100
+          if (mode === 'break') return ((breakTime - timeLeft) / breakTime) * 100
+          return 0
+        }
+        const energyLevel = getEnergyLevel()
+
+        return (
+          <div className="pomodoro-container" style={{ position: 'relative' }}>
+            <div
+              onClick={toggleTimer}
+              onContextMenu={openDialog}
+              onAuxClick={(e) => e.button === 1 && resetTimer(e)}
+              title="Left: Start/Pause | Middle: Reset | Right: Settings"
+            >
+              <StatusPill
+                className={`pomodoro ${mode} ${isDialogOpen ? 'expanded' : ''} ${isDialogOpen ? 'no-peel' : ''} ${isActive ? 'active-timer' : ''}`}
+                icon={getIcon()}
+                value={formatTime(timeLeft)}
+                style={{
+                  opacity: isActive ? 1 : 0.7,
+                  '--charge-level': `${energyLevel}%`,
+                }}
+                extraContent={
+                  <>
+                    <div className="battery-liquid-container">
+                      <div
+                        className={`battery-liquid ${
+                          mode === 'break'
+                            ? 'battery-charging'
+                            : energyLevel > 50
+                              ? 'battery-high'
+                              : energyLevel > 20
+                                ? 'battery-warning'
+                                : 'battery-critical'
+                        }`}
+                      ></div>
+                    </div>
+                    {mode === 'break' && isActive && (
+                      <i
+                        className="nf nf-md-power_plug charging-icon"
+                        style={{ zIndex: 1, color: 'var(--kawaii-lavender)' }}
+                      ></i>
+                    )}
+                  </>
+                }
+                appendContent={
+                  <div
+                    className="inline-pomodoro-settings"
+                    onClick={(e) => e.stopPropagation()}
+                    onContextMenu={(e) => e.stopPropagation()}
+                  >
+                    <form onSubmit={saveSettings}>
+                      <label>
+                        Work:{' '}
+                        <input
+                          type="number"
+                          name="work"
+                          defaultValue={workTime / 60}
+                          min="1"
+                          max="120"
+                        />
+                      </label>
+                      <label>
+                        Break:{' '}
+                        <input
+                          type="number"
+                          name="break"
+                          defaultValue={breakTime / 60}
+                          min="1"
+                          max="60"
+                        />
+                      </label>
+                      <label className="checkbox-label">
+                        <input
+                          type="checkbox"
+                          name="auto"
+                          checked={autoStartBreak}
+                          onChange={async (e) => {
+                            setAutoStartBreak(e.target.checked)
+                            await dbStore.set('pomodoro_setting_auto', e.target.checked.toString())
+                          }}
+                        />{' '}
+                        Auto
+                      </label>
+                      <label>
+                        Gap:{' '}
+                        <input type="number" name="gap" defaultValue={breakGap} min="0" max="300" />
+                        s
+                      </label>
+                      <button type="submit" className="dialog-save">
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        className="dialog-cancel"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setIsDialogOpen(false)
+                        }}
+                      >
+                        Close
+                      </button>
+                    </form>
+                  </div>
+                }
+              />
+            </div>
+          </div>
+        )
+      })
+
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props)
+          this.state = { hasError: false }
+        }
+        static getDerivedStateFromError(error) {
+          return { hasError: true }
+        }
+        componentDidCatch(error, errorInfo) {
+          console.error('Widget Error:', error, errorInfo)
+          if (window.logAppError) {
+            window.logAppError(`Widget Error: ${error?.message || error}`)
+          }
+        }
+        render() {
+          if (this.state.hasError) {
+            return (
+              <div
+                className="status-pill"
+                style={{
+                  '--pill-color': 'var(--ctp-mocha-red)',
+                  background: 'var(--ctp-mocha-crust)',
+                }}
+              >
+                <i className="nf nf-md-alert_circle"></i>
+                <span className="value" style={{ color: 'var(--ctp-mocha-red)' }}>
+                  [Error]
+                </span>
+              </div>
+            )
+          }
+          return this.props.children
+        }
+      }
+
+      const ToastItem = React.memo(({ toast }) => {
+        const elRef = useRef(null)
+        const isDragging = useRef(false)
+        const startY = useRef(0)
+        const currentY = useRef(0)
+
+        useEffect(() => {
+          if (elRef.current) {
+            anime({
+              targets: elRef.current,
+              translateY: [-40, 0],
+              opacity: [0, 1],
+              scale: [0.85, 1],
+              duration: 700,
+              easing: 'easeOutElastic(1, 0.75)',
+            })
+          }
+        }, [])
+
+        const handlePointerDown = (e) => {
+          isDragging.current = true
+          startY.current = e.clientY
+          if (elRef.current) elRef.current.style.transition = 'none'
+        }
+
+        const handlePointerMove = (e) => {
+          if (!isDragging.current || !elRef.current) return
+          const deltaY = e.clientY - startY.current
+          // Only allow dragging upwards to dismiss
+          if (deltaY < 0) {
+            currentY.current = deltaY
+            elRef.current.style.transform = `translateY(${deltaY}px) rotate(${deltaY * 0.08}deg)`
+            elRef.current.style.opacity = Math.max(0, 1 + deltaY / 100)
+          }
+        }
+
+        const handlePointerUp = () => {
+          if (!isDragging.current) return
+          isDragging.current = false
+
+          if (currentY.current < -35 && elRef.current) {
+            // High speed upward fling dismiss
+            anime({
+              targets: elRef.current,
+              translateY: -200,
+              rotate: -15,
+              opacity: 0,
+              duration: 300,
+              easing: 'easeInQuad',
+              complete: () => {
+                // Dismiss manually from DOM
+                if (elRef.current) {
+                  elRef.current.style.display = 'none'
+                }
+              },
+            })
+          } else if (elRef.current) {
+            // Return back to origin
+            anime({
+              targets: elRef.current,
+              translateY: 0,
+              rotate: 0,
+              opacity: 1,
+              duration: 400,
+              easing: 'easeOutElastic(1, 0.75)',
+            })
+          }
+          currentY.current = 0
+        }
+
+        return (
+          <div
+            ref={elRef}
+            className="toast"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerLeave={handlePointerUp}
+            style={{ cursor: 'grab' }}
+          >
+            <div className="sparkles-container">
+              <span className="sparkle s1" style={{ '--tx': '-20px', '--ty': '-20px' }}>
+                ✦
+              </span>
+              <span className="sparkle s2" style={{ '--tx': '25px', '--ty': '15px' }}>
+                ✧
+              </span>
+              <span className="sparkle s3" style={{ '--tx': '-15px', '--ty': '25px' }}>
+                ✦
+              </span>
+              <span className="sparkle s4" style={{ '--tx': '20px', '--ty': '-15px' }}>
+                ✧
+              </span>
+            </div>
+            <i className={`nf ${toast.icon}`}></i>
+            <span>{toast.message}</span>
+            <div className="toast-progress"></div>
+          </div>
+        )
+      })
+
+      function App() {
+        const output = useSystemData()
+        const confettiRef = useRef(null)
+        const [errors, setErrors] = useState([])
+
+        // Global Error Log Listeners
+        useEffect(() => {
+          const handleError = (event) => {
+            const errorMsg = event.error?.message || event.message || 'Unknown runtime error'
+            setErrors((prev) => [...new Set([...prev, errorMsg])].slice(-3))
+          }
+
+          const handleRejection = (event) => {
+            const errorMsg = event.reason?.message || event.reason || 'Unhandled rejection'
+            setErrors((prev) => [...new Set([...prev, errorMsg])].slice(-3))
+          }
+
+          window.addEventListener('error', handleError)
+          window.addEventListener('unhandledrejection', handleRejection)
+
+          window.logAppError = (msg) => {
+            setErrors((prev) => [...new Set([...prev, msg])].slice(-3))
+          }
+
+          return () => {
+            window.removeEventListener('error', handleError)
+            window.removeEventListener('unhandledrejection', handleRejection)
+            delete window.logAppError
+          }
+        }, [])
+
+        // Initial entrance sequence of Floating Archipelago + Staggered Capsules
+        useEffect(() => {
+          anime({
+            targets: '.island-arch',
+            translateX: [-150, 0],
+            opacity: [0, 1],
+            scale: [0.8, 1],
+            easing: 'easeOutElastic(1, 0.85)',
+            duration: 1200,
+            delay: 50,
+          })
+
+          anime({
+            targets: '.island-left',
+            translateX: [-120, 0],
+            opacity: [0, 1],
+            scale: [0.9, 1],
+            easing: 'easeOutElastic(1, 0.85)',
+            duration: 1200,
+            delay: 150,
+          })
+
+          anime({
+            targets: '.island-center',
+            translateY: [-60, 0],
+            opacity: [0, 1],
+            scale: [0.92, 1],
+            easing: 'easeOutElastic(1, 0.85)',
+            duration: 1300,
+            delay: 250,
+          })
+
+          anime({
+            targets: '.island-right',
+            translateX: [120, 0],
+            opacity: [0, 1],
+            scale: [0.9, 1],
+            easing: 'easeOutElastic(1, 0.85)',
+            duration: 1200,
+            delay: 350,
+          })
+
+          anime({
+            targets: '.island-arch > *, .island-left > *, .island-center > *, .island-right > *',
+            scale: [0.75, 1],
+            opacity: [0, 1],
+            delay: anime.stagger(40, { start: 650 }),
+            easing: 'easeOutBack',
+            duration: 600,
+          })
+        }, [])
+
+        // Initialize Canvas Confetti to use a background Web Worker (OffscreenCanvas)
+        useEffect(() => {
+          if (confettiRef.current) {
+            window.myConfetti = confetti.create(confettiRef.current, {
+              resize: true,
+              useWorker: true,
+            })
+          }
+        }, [])
+
+        const [toasts, setToasts] = useState([])
+
+        useEffect(() => {
+          window.addToast = (message, icon) => {
+            const id = Date.now()
+            setToasts((prev) => [...prev, { id, message, icon }])
+            setTimeout(() => {
+              setToasts((prev) => prev.filter((t) => t.id !== id))
+            }, 5000)
+          }
+        }, [])
+
+        return (
+          <div className="app">
+            <WeatherPreloader />
+            {/* High-Performance Offscreen Canvas for Worker Confetti with strict layout containment */}
+            <canvas
+              ref={confettiRef}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                width: '100vw',
+                height: '100vh',
+                pointerEvents: 'none',
+                zIndex: 9999,
+                contain: 'strict',
+              }}
+            />
+
+            <div className="toast-container">
+              {toasts.map((toast) => (
+                <ToastItem key={toast.id} toast={toast} />
+              ))}
+            </div>
+
+            <div className="left" style={{ gap: '6px' }}>
+              <div
+                className="island-arch"
+                onClick={(e) => window.triggerRipple(e, 'rgba(23, 147, 209, 0.45)')}
+                title="Arch Linux"
+              >
+                <div className="arch-glass-capsule">
+                  <i className="nf nf-md-arch" style={{ marginRight: 0 }}></i>
+                </div>
+              </div>
+
+              <div className="left island-left" style={{ margin: 0 }}>
+                <WorkspaceWidget glazewm={output.glazewm} />
+                <GlazeControlsWidget glazewm={output.glazewm} />
+              </div>
+            </div>
+
+            <div className="center island-center">
+              {errors.length > 0 ? (
+                <div
+                  className="error-log-pill status-pill"
+                  onClick={() => {
+                    const text = errors.join('\n')
+                    navigator.clipboard.writeText(text)
+                    if (window.addToast)
+                      window.addToast('Errors copied to clipboard!', 'nf-md-clipboard_check')
+                  }}
+                  title={errors.join(' | ') + ' (Click to Copy)'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    background: 'rgba(244, 63, 94, 0.15)',
+                    border: '1px solid #f43f5e',
+                    color: '#f43f5e',
+                    padding: '0 12px',
+                    borderRadius: '9999px',
+                    fontSize: '11px',
+                    fontFamily: "'Outfit', sans-serif",
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    animation: 'pulse 1.5s infinite',
+                    height: '24px',
+                  }}
+                >
+                  <i
+                    className="nf nf-md-alert_circle"
+                    style={{ marginRight: 0, color: '#f43f5e' }}
+                  ></i>
+                  <span>ERR ({errors.length})</span>
+                </div>
+              ) : (
+                <div
+                  className="status-ok-dot status-pill"
+                  title="System Status: All Operational"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(52, 211, 153, 0.15)',
+                    border: '1px solid #34d399',
+                    color: '#34d399',
+                    padding: '0 8px',
+                    borderRadius: '9999px',
+                    fontSize: '12px',
+                    height: '24px',
+                  }}
+                >
+                  <i
+                    className="nf nf-md-heart_pulse"
+                    style={{ marginRight: 0, fontSize: '12px', color: '#34d399' }}
+                  ></i>
+                </div>
+              )}
+              <ClockWidget date={output.date} />
+              <MediaWidget media={output.media} />
+            </div>
+
+            <div className="right island-right">
+              <ErrorBoundary>
+                <PomodoroWidget />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <CpuWidget cpu={output.cpu} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <MemoryWidget memory={output.memory} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <BatteryWidget battery={output.battery} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <NetworkWidget network={output.network} />
+              </ErrorBoundary>
+              <ErrorBoundary>
+                <WeatherWidget weather={output.weather} />
+              </ErrorBoundary>
+            </div>
+          </div>
+        )
+      }
+
+      createRoot(document.getElementById('root')).render(<App />)
+    </script>
+  </body>
+</html>

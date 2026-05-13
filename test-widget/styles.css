@@ -1,0 +1,1462 @@
+/**
+ * Import the Nerdfonts icon font.
+ * Ref https://www.nerdfonts.com/cheat-sheet for a cheatsheet of available Nerdfonts icons.
+ */
+@import 'https://www.nerdfonts.com/assets/css/webfont.css';
+@import url('https://cdn.jsdelivr.net/npm/@catppuccin/palette/css/catppuccin.css');
+
+:root {
+  --text-size: 12px;
+  --icon-size: 12px;
+
+  /* Ethereal Glass Base */
+  --ethereal-bg: rgba(0, 0, 0, 0.4);
+  --ethereal-text: #ffffff;
+  --ethereal-text-dim: rgba(255, 255, 255, 0.6);
+  --ethereal-border:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  --ethereal-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+  --ethereal-emerald: rgba(16, 185, 129, 0.8);
+  --ethereal-rose: rgba(244, 63, 94, 0.8);
+
+  --text-color-light: var(--ethereal-text);
+  --text-color-dark: var(--ethereal-text);
+
+  --icon-color-light: var(--ethereal-text-dim);
+  --icon-color-dark: var(--ethereal-text-dim);
+
+  --background-color-light: transparent;
+  --background-color-dark: transparent;
+
+  transition:
+    background 0.3s ease,
+    color 0.3s ease;
+}
+
+@keyframes kawaii-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes kawaii-sparkle {
+  0% {
+    transform: scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(180deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes scanline-drift {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 0 100%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    opacity: 0.1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0.1;
+  }
+}
+
+#root {
+  transition: background 0.3s ease;
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    color: var(--text-color-light);
+  }
+
+  i {
+    color: var(--icon-color-light);
+  }
+
+  #root {
+    background: var(--background-color-light);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    color: var(--text-color-dark);
+  }
+
+  i {
+    color: var(--icon-color-dark);
+  }
+
+  #root {
+    background: var(--background-color-dark);
+  }
+}
+
+i {
+  margin-right: 7px;
+  font-size: var(--icon-size);
+}
+
+body {
+  font-family: 'Outfit', ui-monospace, 'Geist Mono', 'JetBrains Mono', sans-serif;
+  font-size: var(--text-size);
+  overflow: hidden;
+  letter-spacing: -0.02em;
+}
+
+.value,
+.workspace,
+.center > time {
+  font-family: ui-monospace, 'Geist Mono', 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+div,
+span,
+p {
+  cursor: default;
+  user-select: none;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  background: transparent !important;
+  border-bottom: none;
+  transition: background 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Matikan scanline CRT agar tampilan bersih murni */
+#root::before {
+  display: none;
+}
+
+.app {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 100%;
+  padding: 8px 1.5vw;
+}
+
+.left,
+.center,
+.right {
+  display: flex;
+  align-items: center;
+}
+
+@keyframes baki-breath {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+/* Solid Outer Islands */
+.island-left,
+.island-center,
+.island-right {
+  display: flex;
+  align-items: center;
+  background: #0a0a0c !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.8);
+  border-radius: 9999px;
+  padding: 4px;
+  height: 32px;
+  gap: 6px;
+  box-sizing: border-box;
+  transition:
+    transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    border-color 0.5s ease;
+}
+
+.island-left:hover,
+.island-center:hover,
+.island-right:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: linear-gradient(90deg, #0a0a0c, #16161a, #0a0a0c) !important;
+  background-size: 200% 200% !important;
+  animation: baki-breath 4s ease infinite;
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 12px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0 4px;
+}
+
+/* Premium Pill Styling */
+/* Kawaii Sticker Pill Styling */
+.status-pill-container {
+  display: inline-block;
+  margin-right: 12px;
+  will-change: transform;
+  transform: translate(var(--magnet-x, 0px), var(--magnet-y, 0px));
+  transition: transform 0.55s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.status-pill,
+.workspace,
+.binding-mode,
+.tiling-direction,
+.paused-button,
+.network {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  /* Refractive 3D Edge Highlight */
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  border-radius: 9999px;
+  padding: 0 12px !important;
+  height: 24px !important;
+  line-height: 24px;
+  color: var(--ethereal-text);
+  font-size: var(--text-size);
+  /* Dynamic Elastic Spring Physics */
+  transition:
+    transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background 0.4s cubic-bezier(0.32, 0.72, 0, 1),
+    box-shadow 0.4s ease;
+  box-sizing: border-box;
+  cursor: pointer;
+  margin: 0 !important;
+}
+
+/* Elastic Spring Squeeze on Hover */
+.status-pill:hover,
+.workspace:hover:not(.focused),
+.binding-mode:hover,
+.tiling-direction:hover,
+.paused-button:hover,
+.network:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  transform: translateY(-0.5px) scale(0.98);
+}
+
+.status-pill:active,
+.workspace:active,
+.binding-mode:active,
+.tiling-direction:active,
+.paused-button:active,
+.network:active {
+  transform: translateY(0px) scale(0.95);
+}
+
+.status-pill i.nf {
+  margin-right: 6px;
+  color: var(--ethereal-text-dim);
+}
+
+.status-pill .value {
+  font-weight: 600;
+  color: var(--ethereal-text);
+  display: inline-block;
+  max-width: none;
+  opacity: 1;
+}
+
+.memory {
+  --pill-color: var(--memory-color, var(--ctp-mocha-teal));
+  border-color: var(--pill-color);
+}
+
+.memory .usage-level {
+  display: inline-block;
+  width: 4px;
+  height: 12px;
+  border-radius: 2px;
+  background: var(--memory-color);
+  margin-right: 6px;
+}
+
+/* Custom status pill styling for Logo */
+.logo i {
+  color: var(--kawaii-pink);
+  font-size: 1.1rem;
+  filter: drop-shadow(0 0 8px var(--kawaii-pink));
+}
+
+.logo:hover i {
+  animation: kawaii-bounce 0.5s infinite alternate;
+}
+
+.cpu .high-usage {
+  color: var(--ctp-mocha-peach);
+  font-weight: bold;
+  animation: pulse 1.5s infinite;
+}
+
+.cpu {
+  --pill-color: var(--ctp-mocha-green);
+}
+
+.cpu:hover {
+  --pill-color: var(--ctp-mocha-teal);
+}
+
+.pomodoro.work {
+  --pill-color: var(--ctp-mocha-red);
+}
+
+.pomodoro.break {
+  --pill-color: var(--ctp-mocha-green);
+}
+
+.pomodoro:active {
+  transform: scale(0.96);
+}
+
+.pomodoro.active-timer .value {
+  max-width: 120px;
+  opacity: 1;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Keep other elements with original spacing */
+.logo,
+.binding-mode,
+.tiling-direction,
+.paused-button,
+.network {
+  margin-right: 20px;
+}
+
+.network {
+  width: auto !important;
+  max-width: 145px;
+  display: inline-flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  padding-right: 16px !important;
+  letter-spacing: -0.01em;
+  transition:
+    max-width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease !important;
+}
+
+.network.expanded {
+  max-width: 400px;
+  border-color: var(--network-signal-color) !important;
+}
+
+.network-ssid {
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 110px;
+}
+
+.network-traffic {
+  margin-left: 0;
+  opacity: 0;
+  max-width: 0;
+  overflow: hidden;
+  display: inline-block;
+  transition:
+    margin-left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    max-width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  font-family: 'Outfit', 'Geist Mono', monospace;
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  will-change: margin-left, opacity, max-width;
+}
+
+.network-traffic.visible {
+  margin-left: 8px;
+  opacity: 0.8;
+  max-width: 180px;
+}
+
+.network::after {
+  content: '';
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 10px;
+  width: 2px;
+  background: var(--network-signal-color, var(--ctp-mocha-green));
+  border-radius: 9999px;
+  box-shadow: 0 0 10px var(--network-signal-color, var(--ctp-mocha-green));
+}
+
+.workspaces {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+}
+
+.workspace {
+  position: relative;
+  z-index: 1; /* Sits below the white moving indicator */
+  color: var(--ethereal-text-dim);
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  box-shadow: none !important;
+  transition: color 0.3s ease;
+
+  &.displayed {
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: var(--ethereal-text);
+  }
+
+  &.focused {
+    background: rgba(255, 255, 255, 0.03) !important; /* Keep identical translucent background */
+    color: #000000 !important; /* Black text sits on top of white indicator */
+    box-shadow: none !important;
+    font-weight: 800;
+  }
+}
+
+/* 4th Layer Text wrapper to stack above sliding white capsule */
+.workspace-text {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.binding-mode,
+.tiling-direction,
+.paused-button {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.binding-mode,
+.tiling-direction {
+  transition:
+    background 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease !important;
+}
+
+.battery {
+  position: relative;
+  overflow: hidden;
+  width: auto !important;
+  transition:
+    background 0.4s ease,
+    border-color 0.4s ease,
+    box-shadow 0.4s ease !important;
+}
+
+.battery-text-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  height: 14px;
+  overflow: hidden;
+}
+
+.battery-value-text {
+  display: inline-block;
+  max-width: 50px;
+  opacity: 1;
+  transition:
+    max-width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
+  transform: translateY(0);
+  will-change: max-width, opacity, transform;
+}
+
+.battery-value-text.hidden {
+  max-width: 0;
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.battery-tooltip-text {
+  display: inline-block;
+  max-width: 0;
+  opacity: 0;
+  transform: translateY(20px);
+  transition:
+    max-width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  white-space: nowrap;
+  will-change: max-width, opacity, transform;
+}
+
+.battery-tooltip-text.visible {
+  max-width: 130px;
+  opacity: 0.8;
+  transform: translateY(0);
+}
+
+.battery-liquid-container {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.battery-liquid {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--charge-level, 50%);
+  background: rgba(255, 255, 255, 0.06); /* subtle elegant white glass progress fill */
+  transition:
+    width 0.6s cubic-bezier(0.32, 0.72, 0, 1),
+    background 0.4s ease,
+    box-shadow 0.4s ease;
+  border-radius: inherit;
+  z-index: 0;
+}
+
+/* 1. Kondisi Aman (>25%): Hijau zamrud transparan yang elegan */
+.battery-liquid.battery-high {
+  background: rgba(52, 211, 153, 0.12) !important;
+}
+
+/* 2. Kondisi Peringatan (15% - 25%): Kuning amber hangat */
+.battery-liquid.battery-warning {
+  background: rgba(245, 158, 11, 0.18) !important;
+}
+
+/* 3. Kondisi Kritis (<15%): Merah crimson tajam dengan denyut lambat */
+.battery-liquid.battery-critical {
+  background: rgba(244, 63, 94, 0.22) !important;
+  animation: battery-low-pulse 2s infinite ease-in-out;
+}
+
+/* 4. Kondisi Charging Aktif: Hijau elektrik cerah dengan pendaran neon glow kuat */
+.battery-liquid.battery-charging {
+  background: rgba(52, 211, 153, 0.25) !important;
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.4) !important;
+  animation: battery-charging-shimmer 2.5s infinite ease-in-out;
+}
+
+/* Keyframes Animasi Baterai */
+@keyframes battery-low-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 4px rgba(244, 63, 94, 0.1);
+  }
+  50% {
+    opacity: 0.5;
+    box-shadow: 0 0 12px rgba(244, 63, 94, 0.35);
+  }
+}
+
+@keyframes battery-charging-shimmer {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(52, 211, 153, 0.3);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 16px rgba(52, 211, 153, 0.5);
+  }
+}
+
+.battery .charging-icon {
+  position: absolute;
+  left: 6px;
+  font-size: 10px;
+  animation: bounce 1s infinite;
+  z-index: 2;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Container utama */
+.media-marquee-container {
+  display: flex;
+  align-items: center;
+  max-width: 320px;
+  overflow: hidden;
+  position: relative;
+  background: var(--album-dominant-color, rgba(255, 255, 255, 0.03)) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  border-radius: 9999px;
+  padding: 0 12px !important;
+  height: 24px !important;
+  box-sizing: border-box;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 8%,
+    black 92%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  transition:
+    max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    background 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.6s ease !important;
+}
+
+.media-marquee-container:hover {
+  max-width: 480px;
+}
+
+.media-marquee-container::before {
+  display: none;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.media-icon {
+  margin-right: 10px;
+  flex-shrink: 0; /* Icon tidak boleh mengecil */
+  z-index: 2;
+}
+
+/* Wrapper untuk teks agar animasi smooth */
+.marquee-wrapper {
+  overflow: hidden;
+  width: 100%;
+}
+
+.media-marquee-text {
+  display: inline-block;
+  white-space: nowrap;
+  font-weight: bold;
+  padding-left: 20px; /* Jarak awal sebelum teks muncul */
+  animation-play-state: running;
+  animation: marquee-smooth 12s linear infinite;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.media-marquee-container:hover .media-marquee-text {
+  animation-play-state: paused;
+}
+
+@keyframes marquee-smooth {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    /* Geser sampai teks benar-benar keluar ke kiri */
+    transform: translateX(-100%);
+  }
+}
+
+/* Phase 3 CSS */
+/* Media Controls */
+.media-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none !important;
+  backdrop-filter: none !important;
+  width: 0;
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    margin-right 0.4s ease;
+  z-index: 10;
+  flex-shrink: 0;
+}
+
+.media-marquee-container:hover .media-controls {
+  width: 68px;
+  max-width: 68px;
+  opacity: 1;
+  margin-right: 8px;
+}
+
+.media-controls i {
+  cursor: pointer;
+  font-size: 14px;
+  opacity: 0;
+  transform: scale(0.8) translateX(12px);
+  transition:
+    transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 0.3s ease,
+    color 0.2s;
+}
+
+.media-marquee-container:hover .media-controls i {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+}
+
+/* Staggered transition delays for each button */
+.media-controls > i:nth-of-type(1) {
+  transition-delay: 0.05s;
+}
+.media-controls > .media-play-pause-btn {
+  transition-delay: 0.1s;
+}
+.media-controls > i:nth-of-type(2) {
+  transition-delay: 0.15s;
+}
+
+.media-controls i:hover {
+  transform: scale(1.25) !important;
+  color: #ffffff;
+}
+
+/* Fluid Icon Morphing - Dual Icon */
+.media-play-pause-btn {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.media-play-pause-btn i {
+  position: absolute;
+  margin-right: 0 !important;
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    opacity 0.3s ease;
+  will-change: transform, opacity;
+}
+.media-play-pause-btn:hover i.visible {
+  transform: scale(1.2) !important;
+  color: #ffffff;
+}
+.media-play-pause-btn i.hidden {
+  transform: scale(0.5) rotate(-90deg) !important;
+  opacity: 0;
+  pointer-events: none;
+}
+.media-play-pause-btn i.visible {
+  transform: scale(1) rotate(0deg);
+  opacity: 1;
+}
+.media-play-pause-btn i.pause-icon.visible {
+  color: #ffffff;
+}
+
+/* Interactive Micro-Glows for Weather & Pomodoro */
+.weather {
+  border-color: rgba(137, 180, 250, 0.2) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(137, 180, 250, 0.12) !important;
+}
+
+.pomodoro.work {
+  border-color: rgba(244, 63, 94, 0.25) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(244, 63, 94, 0.18) !important;
+}
+
+.pomodoro.break,
+.pomodoro.gap {
+  border-color: rgba(52, 211, 153, 0.25) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 14px rgba(52, 211, 153, 0.18) !important;
+}
+
+/* Inline Pomodoro Settings Expanded Design */
+.inline-pomodoro-settings {
+  display: flex;
+  overflow: hidden;
+  max-width: 0;
+  opacity: 0;
+  margin-left: 0;
+  transition: margin-left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pomodoro.expanded .inline-pomodoro-settings {
+  margin-left: 12px;
+}
+
+.inline-pomodoro-settings form {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+  color: #ffffff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.inline-pomodoro-settings label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.inline-pomodoro-settings input[type='number'] {
+  width: 32px;
+  background: rgba(0, 0, 0, 0.4) !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  font-size: 11px;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.inline-pomodoro-settings input[type='number']:focus {
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.15);
+}
+
+.checkbox-label {
+  gap: 4px;
+  cursor: pointer;
+}
+
+.dialog-save {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.dialog-save:hover {
+  opacity: 0.9;
+  transform: scale(1.04);
+}
+
+.dialog-cancel {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffffff !important;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.dialog-cancel:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  transform: scale(1.04);
+}
+
+/* Toast Container */
+.toast-container {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 100%;
+  display: flex;
+  align-items: center;
+  z-index: 9999;
+}
+.toast {
+  background: rgba(30, 30, 46, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--kawaii-mauve);
+  border-radius: 8px;
+  padding: 0 16px;
+  height: 80%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--ctp-mocha-text);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  animation: slide-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.toast i {
+  color: var(--kawaii-pink);
+  font-size: 16px;
+}
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--kawaii-pink);
+  animation: progress-shrink 5s linear forwards;
+}
+@keyframes slide-in {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes progress-shrink {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
+/* Sparkle Animations for Toast */
+.sparkles-container {
+  position: absolute;
+  inset: -15px;
+  pointer-events: none;
+  z-index: 10;
+  overflow: visible;
+}
+
+.sparkle {
+  position: absolute;
+  color: var(--kawaii-yellow);
+  font-size: 14px;
+  opacity: 0;
+  animation: sparkle-burst 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  text-shadow: 0 0 5px var(--kawaii-yellow);
+}
+
+.sparkle.s1 {
+  top: -5px;
+  left: 15%;
+  animation-delay: 0.05s;
+}
+.sparkle.s2 {
+  top: 40%;
+  right: -10px;
+  animation-delay: 0.1s;
+}
+.sparkle.s3 {
+  bottom: -8px;
+  left: 30%;
+  animation-delay: 0s;
+}
+.sparkle.s4 {
+  bottom: 30%;
+  left: -10px;
+  animation-delay: 0.15s;
+}
+
+@keyframes sparkle-burst {
+  0% {
+    transform: scale(0) translate(0, 0) rotate(0deg);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2) translate(var(--tx, 15px), var(--ty, -15px)) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+/* ==========================================
+   Zebar Luxury Interaction Suite Additions
+   ========================================== */
+
+/* Click Ripple Container Helper */
+.status-pill,
+.workspace,
+.binding-mode,
+.tiling-direction,
+.paused-button,
+.media-marquee-container,
+.network {
+  position: relative;
+  overflow: hidden !important; /* Contain ripples */
+}
+
+/* Click Ripple Element styling */
+.click-ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.3); /* Champagne Gold by default */
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(0);
+  z-index: 5;
+  will-change: transform, opacity;
+}
+
+/* Liquid glass workspace indicator overlay style */
+.workspace-liquid-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  height: 24px; /* Matches workspace button height */
+  background: rgba(255, 255, 255, 0.95); /* Solid white capsule */
+  border: none !important; /* Remove yellow border */
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2); /* Soft white glow */
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 2; /* Sits on top of Layer 2 but below Layer 4 */
+  transform-origin: center;
+  will-change: left, width, transform;
+}
+
+/* Workspace buttons position relative adjustment for overlay z-index alignment */
+.workspaces {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.workspace {
+  position: relative;
+  z-index: 2; /* Sit on top of the indicators to capture clicks but let overlay render over visual */
+}
+
+/* Swipable Toast dragging optimization */
+.toast {
+  user-select: none;
+  touch-action: none;
+  will-change: transform, opacity;
+}
+
+/* Save Checkmark Animation State */
+.dialog-save {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition:
+    background 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.dialog-save.success-mode {
+  background: rgba(181, 255, 217, 0.15) !important;
+  border-color: #b5ffd9 !important;
+  color: #b5ffd9 !important;
+}
+
+/* ==========================================
+   Arch Linux Nested Circular Glass Island
+   ========================================== */
+
+/* Outer Solid Circular Island/Baki */
+.island-arch {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0c !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.8);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  padding: 4px;
+  box-sizing: border-box;
+  transition:
+    transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    border-color 0.5s ease,
+    box-shadow 0.5s ease;
+  margin-right: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden; /* Contain ripples */
+}
+
+/* Hover glow & scaling */
+.island-arch:hover {
+  border-color: rgba(23, 147, 209, 0.3);
+  box-shadow: 0 0 15px rgba(23, 147, 209, 0.15);
+  transform: translateY(-0.5px) scale(1.08);
+}
+
+/* Inner Nested Circular Glass Capsule */
+.arch-glass-capsule {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  /* Premium 3D Edge Highlights */
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.4s ease;
+}
+
+.island-arch:hover .arch-glass-capsule {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Centered Arch Icon styling */
+.arch-glass-capsule i {
+  font-size: 11px;
+  color: #1793d1;
+  text-shadow: 0 0 8px rgba(23, 147, 209, 0.4);
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* 360-degree rotation transition on hover */
+.island-arch:hover .arch-glass-capsule i {
+  transform: rotate(360deg);
+}
+
+/* ==========================================
+   Pomodoro Battery-Liquid Integration
+   ========================================== */
+.pomodoro {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+/* Cozy custom lavender neon shimmer for break mode charging */
+.pomodoro .battery-charging {
+  background: rgba(180, 190, 254, 0.25) !important;
+  box-shadow: 0 0 12px rgba(180, 190, 254, 0.4) !important;
+  animation: battery-charging-shimmer 2.5s infinite ease-in-out;
+}
+
+/* ==========================================
+   Last.fm & Local Media Integration Styles
+   ========================================== */
+
+/* Favorite album glow overlay */
+.favorite-glow {
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.2),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 15px var(--album-dominant-color) !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* 1. Scrobble Stats Badge */
+.scrobble-stats-badge {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 9px;
+  font-family: var(--font-monospace);
+  font-weight: 800;
+  color: var(--kawaii-peach) !important;
+  padding: 0 4px;
+  height: 13px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 9999px;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+  transition: all 0.3s ease;
+  z-index: 2;
+  margin-right: 6px;
+}
+
+.scrobble-stats-badge:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: scale(1.05);
+}
+
+.scrobble-stats-badge i {
+  font-size: 9px;
+}
+
+/* 2. Rotating Vinyl Record Art */
+.vinyl-wrapper {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #111111;
+  border: 1px solid #000000;
+  box-shadow:
+    0 0 5px rgba(0, 0, 0, 0.5),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+  z-index: 2;
+}
+
+/* Micro vinyl-grooves overlay */
+.vinyl-wrapper::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    circle,
+    transparent,
+    transparent 1px,
+    rgba(255, 255, 255, 0.04) 1px,
+    rgba(255, 255, 255, 0.04) 2px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+
+.vinyl-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.vinyl-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: var(--kawaii-purple);
+  font-size: 10px;
+}
+
+.vinyl-center-pin {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #111111;
+  box-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  z-index: 3;
+}
+
+/* Spinning Record Animations */
+.vinyl-wrapper.spinning {
+  animation: spin-vinyl 10s linear infinite;
+}
+
+.vinyl-wrapper.paused {
+  animation: spin-vinyl 10s linear infinite;
+  animation-play-state: paused;
+}
+
+@keyframes spin-vinyl {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* 3. Inline Settings Form Inside Capsule */
+.media-inline-settings-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: hidden;
+  animation: inline-form-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes inline-form-fade-in {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.media-inline-settings-form input {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  font-family: var(--font-monospace) !important;
+  font-size: 9px !important;
+  font-weight: 700;
+  padding: 1px 6px !important;
+  border-radius: 4px !important;
+  height: 14px !important;
+  box-sizing: border-box !important;
+  flex: 1;
+  min-width: 40px;
+  outline: none !important;
+  transition: all 0.2s ease;
+}
+
+.media-inline-settings-form input:focus {
+  border-color: var(--kawaii-yellow) !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.2);
+}
+
+.media-inline-settings-form input::placeholder {
+  color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.save-settings-btn {
+  background: var(--kawaii-green) !important;
+  border: none !important;
+  color: #000000 !important;
+  border-radius: 4px !important;
+  width: 16px !important;
+  height: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  font-size: 8px !important;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.save-settings-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 8px var(--kawaii-green);
+}
+
+/* 4. RPG-Style "Life-Bar" Progress Tracker */
+.rpg-life-bar-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.rpg-life-bar {
+  height: 100%;
+  width: 0%;
+  transition: width 0.4s linear;
+}
+
+/* Standard life-bar styling for regular songs */
+.rpg-life-bar.standard-gray-flow {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.4));
+}
+
+/* Glowing Gold/Cyber Neon Pulsing styling for high-scrobble favorite songs */
+.rpg-life-bar.favorite-neon-pulsing {
+  background: linear-gradient(90deg, #f9cb9c, #ffe599, #f9cb9c);
+  background-size: 200% 100%;
+  animation:
+    gold-shimmer-flow 2s infinite linear,
+    favorite-pulse 1s infinite alternate;
+  box-shadow: 0 0 4px #ffe599;
+}
+
+@keyframes gold-shimmer-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes favorite-pulse {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
