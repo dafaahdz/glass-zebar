@@ -1122,43 +1122,91 @@
       )
 
       // Dedicated rotating album circular "baki island" component with macOS Dynamic Island expansion
-      const MediaAlbumWidget = React.memo(({ media, albumCover, dominantColor, albumName }) => {
-        const hasSession = !!media?.currentSession
-        const isPlaying = hasSession && media.currentSession.isPlaying
+      const MediaAlbumWidget = React.memo(
+        ({ media, albumCover, dominantColor, albumName }) => {
+          const hasSession = !!media?.currentSession
+          const isPlaying = hasSession && media.currentSession.isPlaying
 
-        return (
-          <div
-            className={`island-album ${hasSession ? 'active' : 'inactive'}`}
-            onClick={(e) => hasSession && window.triggerRipple(e, 'rgba(255, 255, 255, 0.2)')}
-            style={{
-              '--album-dominant-color': dominantColor || 'rgba(255, 255, 255, 0.03)',
-            }}
-          >
-            {hasSession && (
-              <div className="album-glass-capsule">
-                <div className={`vinyl-wrapper ${isPlaying ? 'spinning' : 'paused'}`}>
-                  {albumCover ? (
-                    <img src={albumCover} className="vinyl-cover" alt="album art" />
-                  ) : (
-                    <div className="vinyl-placeholder">
-                      <i className="nf nf-md-music_note" style={{ marginRight: 0 }}></i>
-                    </div>
+          // Progress calculations for 360-degree Interactive Track Progress Ring
+          const position = media?.currentSession?.position || 0
+          const duration = media?.currentSession?.duration || (media?.currentSession?.endTime - media?.currentSession?.startTime) || 1
+          const progressPercent = Math.min(100, Math.max(0, (position / duration) * 100))
+
+          const radius = 10.5
+          const circumference = 2 * Math.PI * radius // ~65.97
+          const strokeDasharray = circumference
+          const strokeDashoffset = circumference - (progressPercent / 100) * circumference
+
+          return (
+            <div
+              className={`island-album ${hasSession ? 'active' : 'inactive'}`}
+              onClick={(e) => hasSession && window.triggerRipple(e, 'rgba(255, 255, 255, 0.2)')}
+              style={{
+                '--album-dominant-color': dominantColor || 'rgba(255, 255, 255, 0.03)',
+              }}
+            >
+              {hasSession && (
+                <div className="album-glass-capsule">
+                  <div className={`vinyl-wrapper ${isPlaying ? 'spinning' : 'paused'}`}>
+                    {albumCover ? (
+                      <img src={albumCover} className="vinyl-cover" alt="album art" />
+                    ) : (
+                      <div className="vinyl-placeholder">
+                        <i className="nf nf-md-music_note" style={{ marginRight: 0 }}></i>
+                      </div>
+                    )}
+                    <div className="vinyl-center-pin"></div>
+                  </div>
+
+                  {/* 360-degree SVG Track Progress Ring */}
+                  <svg className="vinyl-progress-ring" viewBox="0 0 24 24">
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r={radius}
+                      className="vinyl-progress-ring-bg"
+                    />
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r={radius}
+                      className="vinyl-progress-ring-bar"
+                      style={{
+                        strokeDasharray: strokeDasharray,
+                        strokeDashoffset: strokeDashoffset,
+                      }}
+                    />
+                  </svg>
+
+                  {albumName && (
+                    <span className="album-name-hover-text">
+                      {albumName}
+                    </span>
                   )}
-                  <div className="vinyl-center-pin"></div>
+
+                  <div className="album-glass-glare"></div>
                 </div>
-
-                {albumName && (
-                  <span className="album-name-hover-text">
-                    {albumName}
-                  </span>
-                )}
-
-                <div className="album-glass-glare"></div>
-              </div>
-            )}
-          </div>
-        )
-      })
+              )}
+            </div>
+          )
+        },
+        (prev, next) => {
+          if (!prev.media?.currentSession || !next.media?.currentSession) {
+            return prev.media?.currentSession === next.media?.currentSession
+          }
+          const p = prev.media.currentSession
+          const n = next.media.currentSession
+          return (
+            p.title === n.title &&
+            p.artist === n.artist &&
+            p.isPlaying === n.isPlaying &&
+            Math.floor((p.position || 0) / 1000) === Math.floor((n.position || 0) / 1000) &&
+            prev.albumCover === next.albumCover &&
+            prev.dominantColor === next.dominantColor &&
+            prev.albumName === next.albumName
+          )
+        },
+      )
 
       // Hidden Weather Preloader Component to force icon cache & avoid flickers
       const WeatherPreloader = () => {

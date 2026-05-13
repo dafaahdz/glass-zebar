@@ -811,7 +811,11 @@ body,
 
 /* Interactive Micro-Glows for Weather & Pomodoro */
 .weather {
-  border-color: color-mix(in srgb, var(--weather-accent-color, #89b4fa) 20%, transparent) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--weather-accent-color, #89b4fa) 20%,
+    transparent
+  ) !important;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
     inset 0 -1px 0 rgba(0, 0, 0, 0.5),
@@ -1478,7 +1482,7 @@ body,
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.8);
   border-radius: 9999px;
-  
+
   width: auto !important;
   min-width: 32px !important;
   max-width: 32px !important; /* Circular default */
@@ -1487,7 +1491,7 @@ body,
   box-sizing: border-box;
   overflow: hidden;
   flex-shrink: 0;
-  
+
   transition:
     max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
     width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
@@ -1520,16 +1524,18 @@ body,
   max-width: 192px !important; /* Base 32px + Max 160px text area */
   border-color: var(--album-dominant-color, rgba(255, 255, 255, 0.12)) !important;
   box-shadow: 0 0 15px var(--album-dominant-color) !important;
-  transform: translateY(-0.5px) scale(1.04);
+  /* Ultimate Goldilocks sweet spot: 1.05s with gentle deceleration cubic-bezier curve */
+  transition:
+    max-width 1.05s cubic-bezier(0.25, 1, 0.4, 1),
+    border-color 1.05s cubic-bezier(0.25, 1, 0.4, 1),
+    box-shadow 1.05s cubic-bezier(0.25, 1, 0.4, 1);
 }
 
 .album-glass-capsule {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  width: auto !important;
-  min-width: 24px !important;
-  max-width: 24px !important;
+  width: 100% !important;
   height: 24px;
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.03) !important;
@@ -1543,12 +1549,12 @@ body,
   position: relative;
   overflow: hidden;
   transition:
-    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.4s ease;
+    background 0.4s ease,
+    border-color 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.85s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .island-album.active:hover .album-glass-capsule {
-  max-width: 184px !important;
   background: rgba(255, 255, 255, 0.08) !important;
 }
 
@@ -1562,6 +1568,33 @@ body,
   box-shadow: none;
 }
 
+/* 360-degree SVG Interactive Track Progress Ring */
+.vinyl-progress-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+  transform: rotate(-90deg);
+  z-index: 5;
+}
+
+.vinyl-progress-ring-bg {
+  fill: transparent;
+  stroke: rgba(255, 255, 255, 0.05);
+  stroke-width: 1px;
+}
+
+.vinyl-progress-ring-bar {
+  fill: transparent;
+  stroke: var(--album-dominant-color, #89b4fa);
+  stroke-width: 1.5px;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 0 1.5px var(--album-dominant-color, #89b4fa));
+}
+
 /* Album name premium hover text animation styling */
 .album-name-hover-text {
   font-family: var(--font-monospace);
@@ -1570,9 +1603,10 @@ body,
   color: rgba(255, 255, 255, 0.9);
   opacity: 0;
   transform: translateX(10px);
+  /* Fallback/Hover-leave: Instant fade out without delay */
   transition:
-    opacity 0.6s ease 0.15s,
-    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+    opacity 0.25s ease,
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1586,6 +1620,10 @@ body,
 .island-album.active:hover .album-name-hover-text {
   opacity: 0.9;
   transform: translateX(0);
+  /* Hover-enter: Delayed smooth slide-in synchronized with the 1.05s sweet spot */
+  transition:
+    opacity 0.7s cubic-bezier(0.25, 1, 0.4, 1) 0.2s,
+    transform 0.7s cubic-bezier(0.25, 1, 0.4, 1) 0.2s;
 }
 
 /* 3D Glass shine glaze/reflection on top of album cover */
@@ -1602,4 +1640,3 @@ body,
   pointer-events: none;
   z-index: 4;
 }
-
