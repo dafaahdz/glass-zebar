@@ -4,9 +4,7 @@
   "version": "0.0.1",
   "description": "",
   "tags": [],
-  "previewImages": [
-    "resources\\preview-image-1.png"
-  ],
+  "previewImages": ["resources\\preview-image-1.png"],
   "repositoryUrl": "",
   "widgets": [
     {
@@ -17,9 +15,7 @@
       "focused": false,
       "resizable": false,
       "transparent": false,
-      "includeFiles": [
-        "test-widget/**"
-      ],
+      "includeFiles": ["test-widget/**"],
       "caching": {
         "defaultDuration": 604800,
         "rules": []
@@ -34,7 +30,7 @@
           "offsetX": "0px",
           "offsetY": "0px",
           "width": "100%",
-          "height": "40px",
+          "height": "60px",
           "monitorSelection": {
             "type": "all"
           },

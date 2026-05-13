@@ -380,7 +380,7 @@ body,
   padding-right: 16px !important;
   letter-spacing: -0.01em;
   transition:
-    max-width 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
     background 0.4s ease,
     border-color 0.4s ease,
     box-shadow 0.4s ease !important;
@@ -405,9 +405,9 @@ body,
   overflow: hidden;
   display: inline-block;
   transition:
-    margin-left 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity 0.3s ease,
-    max-width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    margin-left 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s,
+    opacity 0.6s ease 0.15s,
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
   font-family: 'Outfit', 'Geist Mono', monospace;
   font-size: 11px;
   white-space: nowrap;
@@ -641,10 +641,11 @@ body,
   position: relative;
   background: var(--album-dominant-color, rgba(255, 255, 255, 0.03)) !important;
   backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid var(--album-dominant-color, rgba(255, 255, 255, 0.05)) !important;
   box-shadow:
     inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 4px 12px var(--album-dominant-color, rgba(0, 0, 0, 0.15));
   border-radius: 9999px;
   padding: 0 12px !important;
   height: 24px !important;
@@ -658,7 +659,7 @@ body,
   );
   mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
   transition:
-    max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
     background 1.2s cubic-bezier(0.16, 1, 0.3, 1),
     box-shadow 0.6s ease !important;
 }
@@ -727,10 +728,10 @@ body,
   opacity: 0;
   overflow: hidden;
   transition:
-    width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    max-width 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity 0.3s ease,
-    margin-right 0.4s ease;
+    width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease,
+    margin-right 0.85s cubic-bezier(0.16, 1, 0.3, 1);
   z-index: 10;
   flex-shrink: 0;
 }
@@ -748,8 +749,8 @@ body,
   opacity: 0;
   transform: scale(0.8) translateX(12px);
   transition:
-    transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity 0.3s ease,
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease,
     color 0.2s;
 }
 
@@ -760,13 +761,13 @@ body,
 
 /* Staggered transition delays for each button */
 .media-controls > i:nth-of-type(1) {
-  transition-delay: 0.05s;
+  transition-delay: 0.15s;
 }
 .media-controls > .media-play-pause-btn {
-  transition-delay: 0.1s;
+  transition-delay: 0.2s;
 }
 .media-controls > i:nth-of-type(2) {
-  transition-delay: 0.15s;
+  transition-delay: 0.25s;
 }
 
 .media-controls i:hover {
@@ -841,7 +842,7 @@ body,
   max-width: 0;
   opacity: 0;
   margin-left: 0;
-  transition: margin-left 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transition: margin-left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .pomodoro.expanded .inline-pomodoro-settings {
@@ -1460,3 +1461,141 @@ body,
     filter: brightness(1.2);
   }
 }
+
+/* ==========================================
+   Rotating Album Art Solid Circular Island
+   ========================================== */
+
+.island-album {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a0c !important;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 16px 32px -12px rgba(0, 0, 0, 0.8);
+  border-radius: 9999px;
+  
+  width: auto !important;
+  min-width: 32px !important;
+  max-width: 32px !important; /* Circular default */
+  height: 32px;
+  padding: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+  
+  transition:
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    padding 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    margin 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.5s ease,
+    border-color 0.85s ease,
+    box-shadow 0.85s ease,
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+  margin-right: 6px;
+  cursor: pointer;
+  position: relative;
+}
+
+/* Collapsed/Hidden State for Startup and No Track Playing */
+.island-album.inactive {
+  width: 0 !important;
+  height: 32px !important;
+  padding: 0 !important;
+  margin-right: 0 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Micro ambient glow and dynamic size expansion on hover */
+.island-album.active:hover {
+  max-width: 192px !important; /* Base 32px + Max 160px text area */
+  border-color: var(--album-dominant-color, rgba(255, 255, 255, 0.12)) !important;
+  box-shadow: 0 0 15px var(--album-dominant-color) !important;
+  transform: translateY(-0.5px) scale(1.04);
+}
+
+.album-glass-capsule {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: auto !important;
+  min-width: 24px !important;
+  max-width: 24px !important;
+  height: 24px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  /* Premium 3D Edge Highlights */
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+  transition:
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.4s ease;
+}
+
+.island-album.active:hover .album-glass-capsule {
+  max-width: 184px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Static vinyl size constraint to prevent ellipses stretching */
+.island-album .vinyl-wrapper {
+  width: 24px !important;
+  height: 24px !important;
+  flex-shrink: 0 !important;
+  border: none;
+  background: #111111;
+  box-shadow: none;
+}
+
+/* Album name premium hover text animation styling */
+.album-name-hover-text {
+  font-family: var(--font-monospace);
+  font-size: 9px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0;
+  transform: translateX(10px);
+  transition:
+    opacity 0.6s ease 0.15s,
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  margin-left: 6px;
+  margin-right: 6px;
+  max-width: 130px; /* Limits the inner text expansion content width */
+  flex-shrink: 0;
+}
+
+.island-album.active:hover .album-name-hover-text {
+  opacity: 0.9;
+  transform: translateX(0);
+}
+
+/* 3D Glass shine glaze/reflection on top of album cover */
+.album-glass-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0) 50%,
+    rgba(0, 0, 0, 0.25) 100%
+  );
+  pointer-events: none;
+  z-index: 4;
+}
+
