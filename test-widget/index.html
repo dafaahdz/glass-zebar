@@ -538,11 +538,35 @@
         ({ weather }) => {
           if (!weather) return null
 
+          const getWeatherColor = (status) => {
+            if (!status) return 'var(--ctp-mocha-subtext0)'
+            const s = status.toLowerCase()
+            if (s.includes('clear') || s.includes('sunny')) {
+              return 'var(--ctp-mocha-yellow)'
+            }
+            if (s.includes('thunder') || s.includes('lightning')) {
+              return 'var(--ctp-mocha-mauve)'
+            }
+            if (s.includes('rain') || s.includes('drizzle') || s.includes('sprinkle')) {
+              return 'var(--ctp-mocha-blue)'
+            }
+            if (s.includes('snow') || s.includes('ice') || s.includes('frost')) {
+              return 'var(--ctp-mocha-sky)'
+            }
+            if (s.includes('cloud')) {
+              return 'var(--ctp-mocha-teal)'
+            }
+            return 'var(--ctp-mocha-subtext0)'
+          }
+
+          const weatherColor = getWeatherColor(weather.status)
+
           return (
             <StatusPill
               className="weather"
               icon={WEATHER_ICONS_MAP[weather.status] || 'nf-weather-na'}
               value={`${Math.round(weather.celsiusTemp)}°C`}
+              style={{ '--weather-accent-color': weatherColor }}
             />
           )
         },
