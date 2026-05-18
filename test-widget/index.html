@@ -2820,13 +2820,13 @@
             anime.remove('.arch-quick-actions .action-btn')
 
             if (prefersReduced) {
-              anime.set('.island-arch', { maxWidth: '272px' })
+              anime.set('.island-arch', { maxWidth: '450px' })
               anime.set('.arch-quick-actions', { opacity: 1, marginLeft: 12 })
               anime.set('.arch-quick-actions .action-btn', { scale: 1, opacity: 1 })
             } else {
               anime({
                 targets: '.island-arch',
-                maxWidth: [32, 272],
+                maxWidth: [32, 450],
                 duration: 850,
                 easing: 'spring(1, 95, 15, 0)',
               })
@@ -2859,7 +2859,7 @@
             } else {
               anime({
                 targets: '.island-arch',
-                maxWidth: [272, 32],
+                maxWidth: 32,
                 duration: 450,
                 easing: 'cubicBezier(0.16, 1, 0.3, 1)',
               })
