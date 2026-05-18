@@ -662,7 +662,18 @@ body,
 }
 
 .media-marquee-container::before {
-  display: none;
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--album-cover-url);
+  background-size: cover;
+  background-position: center;
+  filter: blur(8px) brightness(0.55) saturate(1.5);
+  opacity: 0.38;
+  z-index: -1;
+  pointer-events: none;
+  transition: background-image 0.8s ease;
+  border-radius: 9999px;
 }
 
 @keyframes shimmer {
@@ -1699,3 +1710,96 @@ body,
     background 0.4s ease,
     box-shadow 0.4s ease !important;
 }
+
+/* ==========================================================================
+   GLASS-PACK ULTRA-LUXURY ANIMATION SUITE SPECIFIC ADDITIONS
+   ========================================================================== */
+
+/* Opsi B: Ethereal Island Halo Glow */
+.island-left,
+.island-center,
+.island-right,
+.island-arch,
+.island-album {
+  position: relative;
+}
+
+.island-left::before,
+.island-center::before,
+.island-right::before,
+.island-arch::before,
+.island-album::before {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  background: radial-gradient(circle, var(--island-glow-color, rgba(255, 255, 255, 0.08)) 0%, transparent 70%);
+  opacity: 0;
+  filter: blur(12px);
+  z-index: -1;
+  pointer-events: none;
+  border-radius: inherit;
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1), transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  transform: scale(0.95);
+  will-change: opacity, transform;
+}
+
+.island-left:hover::before,
+.island-center:hover::before,
+.island-right:hover::before,
+.island-arch:hover::before,
+.island-album:hover::before {
+  opacity: 0.45;
+  transform: scale(1.03);
+}
+
+/* Opsi G: Kinetic Clock Digital Ticker */
+.ticker-digit-container {
+  display: inline-block;
+  position: relative;
+  overflow: hidden;
+  height: 14px;
+  line-height: 14px;
+  width: 8px;
+  text-align: center;
+  font-family: ui-monospace, 'Geist Mono', 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.ticker-digit-strip {
+  display: flex;
+  flex-direction: column;
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  will-change: transform;
+}
+
+.clock-separator {
+  display: inline-block;
+  width: 6px;
+  text-align: center;
+  font-weight: bold;
+  animation: clock-separator-blink 2s infinite ease-in-out;
+}
+
+@keyframes clock-separator-blink {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+/* Opsi M: Weather Canvas Container Containment */
+.weather {
+  position: relative;
+}
+
+.weather-canvas {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  contain: strict;
+}
+
