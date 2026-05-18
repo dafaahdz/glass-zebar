@@ -1186,7 +1186,7 @@ body,
 /* Expanded state overrides */
 .island-arch.expanded {
   cursor: default !important;
-  max-width: 272px; /* Limit expanded size, animated by Anime.js */
+  max-width: 450px; /* Limit expanded size, animated by Anime.js */
   padding-right: 14px !important;
   border-color: rgba(23, 147, 209, 0.35) !important;
   box-shadow: 0 0 16px rgba(23, 147, 209, 0.2) !important;
@@ -1839,7 +1839,7 @@ body,
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 12px;
+  gap: 8px; /* Snappy, tight gaps */
   max-width: 0;
   opacity: 0;
   margin-left: 0;
@@ -1847,69 +1847,158 @@ body,
 }
 
 .island-arch.expanded .arch-quick-actions {
-  max-width: 240px;
+  max-width: 400px;
   opacity: 1;
 }
 
-/* Individual Action Button Styles */
+/* ==========================================
+   Liquid Glass Action Capsule Pill Styles
+   ========================================== */
 .arch-quick-actions .action-btn {
-  position: relative;
-  background: transparent;
-  border: none;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.03) !important;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.02) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
+  border-radius: 9999px;
+  padding: 0 !important;
+  min-width: 24px;
+  max-width: 24px; /* Circular by default */
+  height: 24px !important;
   color: var(--ethereal-text-dim);
-  padding: 0;
-  width: 18px;
-  height: 18px;
+  cursor: pointer;
+  outline: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  transition:
+    max-width 0.45s cubic-bezier(0.25, 1, 0.4, 1),
+    padding 0.45s cubic-bezier(0.25, 1, 0.4, 1),
+    border-color 0.4s ease,
+    box-shadow 0.4s ease,
+    color 0.25s ease;
+  flex-shrink: 0;
+}
+
+/* Icon centering adjustment */
+.arch-quick-actions .action-btn i {
+  font-size: 11px;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  line-height: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
-  cursor: pointer;
-  outline: none;
-  transition: color 0.25s ease, transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  width: 12px;
+  height: 12px;
+  margin: 0 auto;
 }
 
-.arch-quick-actions .action-btn:hover {
-  color: var(--ethereal-text);
-  transform: scale(1.2);
-}
-
-.arch-quick-actions .action-btn.love-btn.active {
-  color: #f38ba8 !important; /* ctp red */
-  text-shadow: 0 0 8px #f38ba8;
-}
-
-.arch-quick-actions .action-btn.vignette-btn.active {
-  color: #f9e2af !important; /* ctp yellow */
-  text-shadow: 0 0 8px #f9e2af;
-}
-
-/* Custom Snappy Hover Tooltips */
-.action-btn .action-tooltip {
-  position: absolute;
-  top: 32px;
-  left: 50%;
-  transform: translateX(-50%) translateY(8px);
-  background: rgba(10, 10, 12, 0.95);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  color: #ffffff;
-  font-family: 'Outfit', sans-serif;
-  font-size: 9px;
-  font-weight: 600;
-  padding: 3px 8px;
-  border-radius: 4px;
-  white-space: nowrap;
+/* Text label styling - Collapsed by default */
+.arch-quick-actions .action-btn .action-btn-text {
+  font-family: var(--font-monospace);
+  font-size: 8px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.9);
   opacity: 0;
+  max-width: 0;
+  transform: translateX(6px);
+  transition:
+    opacity 0.2s ease,
+    max-width 0.25s ease,
+    transform 0.2s ease,
+    margin-left 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
   pointer-events: none;
-  transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
-  z-index: 1001;
+  margin-left: 0;
+  flex-shrink: 0;
 }
 
-.action-btn:hover .action-tooltip {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
+/* ==========================================
+   Kinetic Hover Expansion (Flex Push)
+   ========================================== */
+.arch-quick-actions .action-btn:hover {
+  max-width: 120px; /* Expand to pill shape */
+  padding: 0 10px !important;
+  color: var(--ethereal-text);
+  justify-content: flex-start;
+}
+
+.arch-quick-actions .action-btn:hover i {
+  transform: scale(1.1);
+  margin: 0; /* Align left alongside text */
+}
+
+.arch-quick-actions .action-btn:hover .action-btn-text {
+  opacity: 0.95;
+  max-width: 80px;
+  transform: translateX(0);
+  margin-left: 6px;
+  transition:
+    opacity 0.35s cubic-bezier(0.25, 1, 0.4, 1) 0.08s,
+    max-width 0.4s cubic-bezier(0.25, 1, 0.4, 1),
+    transform 0.35s cubic-bezier(0.25, 1, 0.4, 1) 0.08s,
+    margin-left 0.4s ease;
+}
+
+/* ==========================================
+   Themed Kawaii Glow Profiles on Hover
+   ========================================== */
+/* 1. Love Track: Red-Pink Glow */
+.arch-quick-actions .action-btn.love-btn:hover {
+  border-color: rgba(243, 139, 168, 0.35) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(243, 139, 168, 0.4) !important;
+}
+.arch-quick-actions .action-btn.love-btn.active {
+  color: #f38ba8 !important;
+  text-shadow: 0 0 6px #f38ba8;
+}
+
+/* 2. Skip Pomodoro: Green Glow */
+.arch-quick-actions .action-btn.skip-btn:hover {
+  border-color: rgba(166, 227, 161, 0.35) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(166, 227, 161, 0.4) !important;
+}
+
+/* 3. Sync Weather: Teal-Blue Glow */
+.arch-quick-actions .action-btn.sync-btn:hover {
+  border-color: rgba(137, 180, 250, 0.35) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(137, 180, 250, 0.4) !important;
+}
+
+/* 4. Frosted Vignette: Lavender Glow */
+.arch-quick-actions .action-btn.vignette-btn:hover {
+  border-color: rgba(203, 166, 247, 0.35) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(203, 166, 247, 0.4) !important;
+}
+.arch-quick-actions .action-btn.vignette-btn.active {
+  color: #cba6f7 !important;
+  text-shadow: 0 0 6px #cba6f7;
+}
+
+/* 5. Palette Shifter: Yellow Glow */
+.arch-quick-actions .action-btn.palette-btn:hover {
+  border-color: rgba(249, 226, 175, 0.35) !important;
+  box-shadow:
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 0 8px rgba(249, 226, 175, 0.4) !important;
 }
 
 /* Floating Hearts Particles */
