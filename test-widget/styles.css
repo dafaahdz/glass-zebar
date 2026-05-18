@@ -854,11 +854,21 @@ body,
   max-width: 0;
   opacity: 0;
   margin-left: 0;
-  transition: margin-left 0.85s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.pomodoro.expanded .inline-pomodoro-settings {
-  margin-left: 12px;
+/* Disable magnetic/hover transforms and force stable background/cursor when expanded */
+.pomodoro.expanded {
+  transform: none !important;
+  cursor: default !important;
+}
+
+.pomodoro.expanded:hover {
+  transform: none !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+.pomodoro.expanded:active {
+  transform: none !important;
 }
 
 .inline-pomodoro-settings form {

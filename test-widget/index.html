@@ -450,8 +450,8 @@
 
         const handleMouseMove = (e) => {
           const rect = e.currentTarget.getBoundingClientRect()
-          const x = (e.clientX - rect.left - rect.width / 2) * 0.1
-          const y = (e.clientY - rect.top - rect.height / 2) * 0.2
+          const x = (e.clientX - rect.left - rect.width / 2) * 0.04
+          const y = (e.clientY - rect.top - rect.height / 2) * 0.08
           e.currentTarget.style.setProperty('--magnet-x', `${x}px`)
           e.currentTarget.style.setProperty('--magnet-y', `${y}px`)
         }
@@ -2161,7 +2161,7 @@
 
           anime.remove(pomodoroRef.current)
 
-          if (currentFsmState.pulse) {
+          if (currentFsmState.pulse && !isDialogOpen) {
             anime({
               targets: pomodoroRef.current,
               scale: [1, 1.025, 1],
@@ -2177,7 +2177,7 @@
               easing: 'cubicBezier(0.16, 1, 0.3, 1)',
             })
           }
-        }, [status])
+        }, [status, isDialogOpen])
 
         const toggleTimer = async () => {
           if (isDialogOpen) return
@@ -2207,22 +2207,26 @@
 
         useEffect(() => {
           if (isDialogOpen) {
+            anime.remove('.inline-pomodoro-settings')
             anime({
               targets: '.inline-pomodoro-settings',
-              maxWidth: [0, 480],
+              maxWidth: [0, 370],
+              marginLeft: [0, 12],
               opacity: [0, 1],
-              scale: [0.95, 1],
+              scale: [0.96, 1],
               duration: 850,
-              easing: 'cubicBezier(0.16, 1, 0.3, 1)',
+              easing: 'spring(1, 95, 15, 0)',
             })
           } else {
+            anime.remove('.inline-pomodoro-settings')
             anime({
               targets: '.inline-pomodoro-settings',
-              maxWidth: [480, 0],
+              maxWidth: [370, 0],
+              marginLeft: [12, 0],
               opacity: [1, 0],
-              scale: [1, 0.95],
-              duration: 850,
-              easing: 'cubicBezier(0.16, 1, 0.3, 1)',
+              scale: [1, 0.96],
+              duration: 650,
+              easing: 'spring(1, 95, 15, 0)',
             })
           }
         }, [isDialogOpen])
