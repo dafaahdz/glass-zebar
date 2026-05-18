@@ -501,6 +501,9 @@
             receive: network.traffic?.receive || 0,
           })
 
+          const containerRef = useRef(null)
+          const trafficRef = useRef(null)
+
           // Debounce network updates to 500ms
           useEffect(() => {
             const handle = setInterval(() => {
@@ -511,6 +514,65 @@
             }, 500)
             return () => clearInterval(handle)
           }, [network])
+
+          // Spring physics expansion drawer orchestrated by Anime.js
+          useEffect(() => {
+            if (!containerRef.current || !trafficRef.current) return
+
+            anime.remove(containerRef.current)
+            anime.remove(trafficRef.current)
+
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (isHovered) {
+              if (prefersReduced) {
+                anime.set(containerRef.current, { maxWidth: '400px' })
+                anime.set(trafficRef.current, { opacity: 0.8, marginLeft: '8px' })
+              } else {
+                // 1. Snappy macOS-drawer spring expansion
+                anime({
+                  targets: containerRef.current,
+                  maxWidth: '400px',
+                  duration: 850,
+                  easing: 'spring(1, 80, 12, 0)',
+                })
+
+                // 2. Staggered elastic entrance bounce for speed texts
+                anime({
+                  targets: trafficRef.current,
+                  opacity: [0, 0.8],
+                  marginLeft: ['0px', '8px'],
+                  translateX: [12, 0],
+                  duration: 600,
+                  easing: 'easeOutElastic(1, 0.8)',
+                  delay: 80,
+                })
+              }
+            } else {
+              if (prefersReduced) {
+                anime.set(containerRef.current, { maxWidth: '145px' })
+                anime.set(trafficRef.current, { opacity: 0, marginLeft: '0px' })
+              } else {
+                // 1. Sleek fast liquid collapse
+                anime({
+                  targets: containerRef.current,
+                  maxWidth: '145px',
+                  duration: 400,
+                  easing: 'cubicBezier(0.16, 1, 0.3, 1)',
+                })
+
+                // 2. Quick linear ease-out fade out for speed texts
+                anime({
+                  targets: trafficRef.current,
+                  opacity: 0,
+                  marginLeft: '0px',
+                  translateX: 0,
+                  duration: 200,
+                  easing: 'easeOutQuad',
+                })
+              }
+            }
+          }, [isHovered])
 
           // Super fast bitwise-aligned byte conversion using Math.log2
           const formatBytes = (bytes) => {
@@ -550,6 +612,7 @@
 
           return (
             <div
+              ref={containerRef}
               className={`network ${isHovered ? 'expanded' : ''}`}
               style={{ '--network-signal-color': networkColor }}
               onMouseEnter={() => setIsHovered(true)}
@@ -557,7 +620,10 @@
             >
               <i className={`nf ${getNetworkIcon(network)}`}></i>
               <span className="network-ssid">{network.defaultGateway?.ssid}</span>
-              <span className={`network-traffic ${isHovered ? 'visible' : ''}`}>
+              <span
+                ref={trafficRef}
+                className={`network-traffic ${isHovered ? 'visible' : ''}`}
+              >
                 ↓ {formattedRx} ↑ {formattedTx}
               </span>
             </div>
