@@ -535,9 +535,6 @@
           useEffect(() => {
             if (!containerRef.current || !trafficRef.current) return
 
-            anime.remove(containerRef.current)
-            anime.remove(trafficRef.current)
-
             const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
             if (isHovered) {
@@ -546,15 +543,16 @@
                 anime.set(trafficRef.current, { opacity: 0.8, marginLeft: '8px' })
               } else {
                 // 1. Snappy macOS-drawer spring expansion
-                anime({
+                const containerAnim = anime({
                   targets: containerRef.current,
                   maxWidth: '400px',
                   duration: 850,
                   easing: 'spring(1, 80, 12, 0)',
                 })
+                AnimationManager.register('network-container', containerAnim)
 
                 // 2. Staggered elastic entrance bounce for speed texts
-                anime({
+                const trafficAnim = anime({
                   targets: trafficRef.current,
                   opacity: [0, 0.8],
                   marginLeft: ['0px', '8px'],
@@ -563,6 +561,7 @@
                   easing: 'easeOutElastic(1, 0.8)',
                   delay: 80,
                 })
+                AnimationManager.register('network-traffic', trafficAnim)
               }
             } else {
               if (prefersReduced) {
@@ -570,15 +569,16 @@
                 anime.set(trafficRef.current, { opacity: 0, marginLeft: '0px' })
               } else {
                 // 1. Sleek fast liquid collapse
-                anime({
+                const containerAnim = anime({
                   targets: containerRef.current,
                   maxWidth: '145px',
                   duration: 400,
                   easing: 'cubicBezier(0.16, 1, 0.3, 1)',
                 })
+                AnimationManager.register('network-container', containerAnim)
 
                 // 2. Quick linear ease-out fade out for speed texts
-                anime({
+                const trafficAnim = anime({
                   targets: trafficRef.current,
                   opacity: 0,
                   marginLeft: '0px',
@@ -586,7 +586,13 @@
                   duration: 200,
                   easing: 'easeOutQuad',
                 })
+                AnimationManager.register('network-traffic', trafficAnim)
               }
+            }
+
+            return () => {
+              AnimationManager.cleanup('network-container')
+              AnimationManager.cleanup('network-traffic')
             }
           }, [isHovered])
 
@@ -781,7 +787,14 @@
           useEffect(() => {
             if (!liquidRef.current || !battery) return
 
-            anime.remove(liquidRef.current)
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (prefersReduced) {
+              anime.set(liquidRef.current, {
+                clipPath: `polygon(0% 0%, ${level}% 0%, ${level}% 100%, 0% 100%)`
+              })
+              return
+            }
 
             const l = level
             const lMin1 = Math.max(0, l - 1.5)
@@ -790,7 +803,7 @@
             const lMax2 = Math.min(100, l + 1.0)
 
             // Start an infinite alternating wave loop
-            anime({
+            const anim = anime({
               targets: liquidRef.current,
               clipPath: [
                 `polygon(0% 0%, ${lMin1}% 0%, ${lMax2}% 35%, ${lMin1}% 70%, ${lMax2}% 100%, 0% 100%)`,
@@ -801,56 +814,80 @@
               loop: true,
               easing: 'easeInOutSine',
             })
+            AnimationManager.register('battery-wave', anim)
+
+            return () => {
+              AnimationManager.cleanup('battery-wave')
+            }
           }, [level, !!battery])
 
           // 2. Spring Expand/Collapse Sequence on Hover (Anime.js)
           useEffect(() => {
             if (!valueTextRef.current || !tooltipTextRef.current) return
 
-            anime.remove([valueTextRef.current, tooltipTextRef.current])
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
             if (isHovered) {
-              // Value text flies up and fades out
-              anime({
-                targets: valueTextRef.current,
-                maxWidth: 0,
-                opacity: 0,
-                translateY: -20,
-                duration: 500,
-                easing: 'spring(1, 80, 12, 0)',
-              })
+              if (prefersReduced) {
+                anime.set(valueTextRef.current, { maxWidth: 0, opacity: 0, translateY: -20 })
+                anime.set(tooltipTextRef.current, { maxWidth: 130, opacity: 0.8, translateY: 0 })
+              } else {
+                // Value text flies up and fades out
+                const valAnim = anime({
+                  targets: valueTextRef.current,
+                  maxWidth: 0,
+                  opacity: 0,
+                  translateY: -20,
+                  duration: 500,
+                  easing: 'spring(1, 80, 12, 0)',
+                })
+                AnimationManager.register('battery-value', valAnim)
 
-              // Tooltip text flies up from bottom, fades in
-              anime({
-                targets: tooltipTextRef.current,
-                maxWidth: 130,
-                opacity: 0.8,
-                translateY: 0,
-                duration: 500,
-                delay: 80, // Snappy staggered entrance
-                easing: 'spring(1, 80, 12, 0)',
-              })
+                // Tooltip text flies up from bottom, fades in
+                const tipAnim = anime({
+                  targets: tooltipTextRef.current,
+                  maxWidth: 130,
+                  opacity: 0.8,
+                  translateY: 0,
+                  duration: 500,
+                  delay: 80, // Snappy staggered entrance
+                  easing: 'spring(1, 80, 12, 0)',
+                })
+                AnimationManager.register('battery-tooltip', tipAnim)
+              }
             } else {
-              // Value text flies down from top, fades in
-              anime({
-                targets: valueTextRef.current,
-                maxWidth: 50,
-                opacity: 1,
-                translateY: 0,
-                duration: 500,
-                delay: 80, // Snappy staggered entrance
-                easing: 'spring(1, 80, 12, 0)',
-              })
+              if (prefersReduced) {
+                anime.set(valueTextRef.current, { maxWidth: 50, opacity: 1, translateY: 0 })
+                anime.set(tooltipTextRef.current, { maxWidth: 0, opacity: 0, translateY: 20 })
+              } else {
+                // Value text flies down from top, fades in
+                const valAnim = anime({
+                  targets: valueTextRef.current,
+                  maxWidth: 50,
+                  opacity: 1,
+                  translateY: 0,
+                  duration: 500,
+                  delay: 80, // Snappy staggered entrance
+                  easing: 'spring(1, 80, 12, 0)',
+                })
+                AnimationManager.register('battery-value', valAnim)
 
-              // Tooltip text flies down and fades out
-              anime({
-                targets: tooltipTextRef.current,
-                maxWidth: 0,
-                opacity: 0,
-                translateY: 20,
-                duration: 500,
-                easing: 'spring(1, 80, 12, 0)',
-              })
+                // Tooltip text flies down and fades out
+                const tipAnim = anime({
+                  targets: tooltipTextRef.current,
+                  maxWidth: 0,
+                  opacity: 0,
+                  translateY: 20,
+                  duration: 500,
+                  easing: 'spring(1, 80, 12, 0)',
+                })
+                AnimationManager.register('battery-tooltip', tipAnim)
+              }
+            }
+
+            return () => {
+              AnimationManager.cleanup('battery-value')
+              AnimationManager.cleanup('battery-tooltip')
             }
           }, [isHovered])
 
@@ -1194,18 +1231,34 @@
             const direction = leftOffset > prevLeft ? 1 : -1
             prevLeftRef.current = leftOffset
 
-            // Animate indicator positions with liquid squish/stretch jelly
-            anime.remove(indicatorRef.current)
-            anime({
-              targets: indicatorRef.current,
-              left: `${leftOffset}px`,
-              width: `${width}px`,
-              scaleX: [1, 1.3, 0.96, 1],
-              scaleY: [1, 0.85, 1.04, 1],
-              skewX: [0, direction * 8, 0],
-              duration: 450,
-              easing: 'spring(1, 120, 16, 0)',
-            })
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (prefersReduced) {
+              anime.set(indicatorRef.current, {
+                left: `${leftOffset}px`,
+                width: `${width}px`,
+                scaleX: 1,
+                scaleY: 1,
+                skewX: 0
+              })
+            } else {
+              // Animate indicator positions with liquid squish/stretch jelly
+              const anim = anime({
+                targets: indicatorRef.current,
+                left: `${leftOffset}px`,
+                width: `${width}px`,
+                scaleX: [1, 1.3, 0.96, 1],
+                scaleY: [1, 0.85, 1.04, 1],
+                skewX: [0, direction * 8, 0],
+                duration: 450,
+                easing: 'spring(1, 120, 16, 0)',
+              })
+              AnimationManager.register('workspace-indicator', anim)
+            }
+
+            return () => {
+              AnimationManager.cleanup('workspace-indicator')
+            }
           }, [focusedWorkspaceName])
 
           // 2. Outward radial staggered scale bounce ripple on focus shift
@@ -1216,13 +1269,24 @@
             const activeIndex = glazewm.currentWorkspaces.findIndex((w) => w.hasFocus)
 
             if (activeIndex >= 0 && buttons.length > 0) {
-              anime.remove(buttons)
-              anime({
+              const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+              if (prefersReduced) {
+                anime.set(buttons, { scale: 1 })
+                return
+              }
+
+              const anim = anime({
                 targets: buttons,
                 scale: [1, 1.05, 1],
                 delay: anime.stagger(22, { from: activeIndex }),
                 easing: 'spring(1, 120, 15, 0)',
               })
+              AnimationManager.register('workspace-buttons-bounce', anim)
+            }
+
+            return () => {
+              AnimationManager.cleanup('workspace-buttons-bounce')
             }
           }, [focusedWorkspaceName])
 
@@ -1266,19 +1330,33 @@
       )
 
       // Binding Mode Button Component with premium fast scale-up and fade-in entry animation
+      // Binding Mode Button Component with premium fast scale-up and fade-in entry animation
       const BindingModeBtn = React.memo(({ bindingMode, runCommand }) => {
         const ref = useRef(null)
 
         useEffect(() => {
           if (!ref.current) return
-          anime({
-            targets: ref.current,
-            scale: [0.85, 1],
-            opacity: [0, 1],
-            duration: 350,
-            easing: 'easeOutQuart',
-          })
-        }, [])
+
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          const id = 'binding-mode-btn-' + bindingMode.name
+
+          if (prefersReduced) {
+            anime.set(ref.current, { scale: 1, opacity: 1 })
+          } else {
+            const anim = anime({
+              targets: ref.current,
+              scale: [0.85, 1],
+              opacity: [0, 1],
+              duration: 350,
+              easing: 'easeOutQuart',
+            })
+            AnimationManager.register(id, anim)
+          }
+
+          return () => {
+            AnimationManager.cleanup(id)
+          }
+        }, [bindingMode.name])
 
         return (
           <button
@@ -1300,14 +1378,26 @@
         useEffect(() => {
           if (!ref.current) return
           if (prevDir.current !== tilingDirection) {
-            anime.remove(ref.current)
-            anime({
-              targets: ref.current,
-              rotate: tilingDirection === 'horizontal' ? [180, 360] : [0, 180],
-              duration: 450,
-              easing: 'cubicBezier(0.16, 1, 0.3, 1)', // Snappy ultra-premium ease-out expo
-            })
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (prefersReduced) {
+              anime.set(ref.current, {
+                rotate: tilingDirection === 'horizontal' ? 360 : 180
+              })
+            } else {
+              const anim = anime({
+                targets: ref.current,
+                rotate: tilingDirection === 'horizontal' ? [180, 360] : [0, 180],
+                duration: 450,
+                easing: 'cubicBezier(0.16, 1, 0.3, 1)', // Snappy ultra-premium ease-out expo
+              })
+              AnimationManager.register('tiling-direction-btn', anim)
+            }
             prevDir.current = tilingDirection
+          }
+
+          return () => {
+            AnimationManager.cleanup('tiling-direction-btn')
           }
         }, [tilingDirection])
 
@@ -1394,23 +1484,42 @@
         useEffect(() => {
           if (digit === prevDigit.current) return
 
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+          if (prefersReduced) {
+            setDisplayDigits([digit, digit])
+            if (stripRef.current) {
+              anime.set(stripRef.current, { translateY: 0 })
+            }
+            prevDigit.current = digit
+            return
+          }
+
           // Setup old digit at top, new digit at bottom
           setDisplayDigits([prevDigit.current, digit])
-          anime.set(stripRef.current, { translateY: 0 })
+          if (stripRef.current) {
+            anime.set(stripRef.current, { translateY: 0 })
 
-          anime.remove(stripRef.current)
-          anime({
-            targets: stripRef.current,
-            translateY: -14, // height of digital ticker
-            duration: 550,
-            easing: 'spring(1, 100, 15, 0)',
-            complete: () => {
-              setDisplayDigits([digit, digit])
-              anime.set(stripRef.current, { translateY: 0 })
-            },
-          })
+            const anim = anime({
+              targets: stripRef.current,
+              translateY: -14, // height of digital ticker
+              duration: 550,
+              easing: 'spring(1, 100, 15, 0)',
+              complete: () => {
+                setDisplayDigits([digit, digit])
+                anime.set(stripRef.current, { translateY: 0 })
+              },
+            })
+            AnimationManager.register(stripRef.current, anim)
+          }
 
           prevDigit.current = digit
+
+          return () => {
+            if (stripRef.current) {
+              AnimationManager.cleanup(stripRef.current)
+            }
+          }
         }, [digit])
 
         return (
@@ -1845,7 +1954,14 @@
           useEffect(() => {
             if (!vinylRef.current || !hasSession) return
 
-            vinylAnimInstance.current = anime({
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (prefersReduced) {
+              anime.set(vinylRef.current, { rotate: '0deg' })
+              return
+            }
+
+            const anim = anime({
               targets: vinylRef.current,
               rotate: '360deg',
               duration: 10000,
@@ -1853,13 +1969,12 @@
               autoplay: isPlaying,
               easing: 'linear',
             })
+            AnimationManager.register('album-vinyl-rotate', anim)
+            vinylAnimInstance.current = anim
 
             return () => {
-              if (vinylAnimInstance.current) {
-                vinylAnimInstance.current.pause()
-                anime.remove(vinylRef.current)
-                vinylAnimInstance.current = null
-              }
+              AnimationManager.cleanup('album-vinyl-rotate')
+              vinylAnimInstance.current = null
             }
           }, [hasSession])
 
@@ -1886,12 +2001,23 @@
             if (!ringBarRef.current) return
             const targetOffset = circumference - (progressPercent / 100) * circumference
 
-            anime({
-              targets: ringBarRef.current,
-              strokeDashoffset: targetOffset,
-              duration: 350,
-              easing: EASINGS.liquid,
-            })
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+            if (prefersReduced) {
+              anime.set(ringBarRef.current, { strokeDashoffset: targetOffset })
+            } else {
+              const anim = anime({
+                targets: ringBarRef.current,
+                strokeDashoffset: targetOffset,
+                duration: 350,
+                easing: EASINGS.liquid,
+              })
+              AnimationManager.register('album-progress-ring', anim)
+            }
+
+            return () => {
+              AnimationManager.cleanup('album-progress-ring')
+            }
           }, [progressPercent])
 
           return (
@@ -2166,23 +2292,34 @@
         useEffect(() => {
           if (!pomodoroRef.current) return
 
-          anime.remove(pomodoroRef.current)
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+          if (prefersReduced) {
+            anime.set(pomodoroRef.current, { scale: 1.0 })
+            return
+          }
 
           if (currentFsmState.pulse && !isDialogOpen) {
-            anime({
+            const anim = anime({
               targets: pomodoroRef.current,
               scale: [1, 1.025, 1],
               duration: 2000,
               loop: true,
               easing: 'easeInOutSine',
             })
+            AnimationManager.register('pomodoro-pulse', anim)
           } else {
-            anime({
+            const anim = anime({
               targets: pomodoroRef.current,
               scale: 1.0,
               duration: 300,
               easing: 'cubicBezier(0.16, 1, 0.3, 1)',
             })
+            AnimationManager.register('pomodoro-pulse', anim)
+          }
+
+          return () => {
+            AnimationManager.cleanup('pomodoro-pulse')
           }
         }, [status, isDialogOpen])
 
