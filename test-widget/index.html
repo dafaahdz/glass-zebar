@@ -185,7 +185,10 @@
             const prev = this.instances.get(id)
             try {
               prev.pause()
-              anime.remove(prev.animatables)
+              if (prev.animatables) {
+                const targets = prev.animatables.map((a) => a.target)
+                anime.remove(targets)
+              }
             } catch (e) {
               console.warn(`[AnimationManager] Fail clearing instance for ${id}:`, e)
             }
@@ -202,40 +205,44 @@
 
       function useAnime(animeConfig, dependencies = [], customId = null) {
         const elementRef = useRef(null)
-        const animInstanceRef = useRef(null)
         const reactId = React.useId()
         const animationId = customId || `anime-ref-${reactId}`
 
         useEffect(() => {
-          if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-            if (elementRef.current && animeConfig.targets) {
-              const finalTransforms = {}
-              if (animeConfig.translateX !== undefined)
-                finalTransforms.translateX = Array.isArray(animeConfig.translateX)
-                  ? animeConfig.translateX[1]
-                  : animeConfig.translateX
-              if (animeConfig.opacity !== undefined)
-                finalTransforms.opacity = Array.isArray(animeConfig.opacity)
-                  ? animeConfig.opacity[1]
-                  : animeConfig.opacity
-              anime.set(elementRef.current, finalTransforms)
-            }
+          const targets = animeConfig.targets || elementRef.current
+          if (!targets) return
+
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+          if (prefersReduced) {
+            const finalTransforms = {}
+            const cssProperties = ['opacity', 'width', 'height', 'scale', 'rotate', 'translateX', 'translateY', 'clipPath']
+            
+            cssProperties.forEach((prop) => {
+              if (animeConfig[prop] !== undefined) {
+                const val = animeConfig[prop]
+                let endVal = Array.isArray(val) ? val[val.length - 1] : val
+                if (endVal && typeof endVal === 'object' && 'value' in endVal) {
+                  endVal = endVal.value
+                }
+                finalTransforms[prop] = endVal
+              }
+            })
+
+            anime.set(targets, finalTransforms)
             return
           }
 
           try {
-            if (!elementRef.current) return
-
             AnimationManager.cleanup(animationId)
 
             const resolvedConfig = {
               ...animeConfig,
-              targets: elementRef.current,
+              targets: targets,
               duration: (animeConfig.duration || 1000) * THEME_SPEED_MULTIPLIER,
             }
 
             const instance = anime(resolvedConfig)
-            animInstanceRef.current = instance
             AnimationManager.register(animationId, instance)
           } catch (error) {
             console.warn(`[Anime.js Fail] Fallback active for ${animationId}:`, error)
