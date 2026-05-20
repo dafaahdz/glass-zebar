@@ -749,31 +749,33 @@
 
           useEffect(() => {
             if (zebarBattery) return
-
             let active = true
+            let batteryObj = null
+            let updateBatteryFn = null
+
             if (navigator.getBattery) {
               navigator.getBattery().then((bat) => {
                 if (!active) return
-
-                const updateBattery = () => {
+                batteryObj = bat
+                updateBatteryFn = () => {
                   setFallbackBattery({
                     chargePercent: bat.level * 100,
                     isCharging: bat.charging,
                     state: bat.charging ? 'charging' : 'discharging',
                   })
                 }
-
-                updateBattery()
-
-                bat.addEventListener('chargingchange', updateBattery)
-                bat.addEventListener('levelchange', updateBattery)
-
-                return () => {
-                  active = false
-                  bat.removeEventListener('chargingchange', updateBattery)
-                  bat.removeEventListener('levelchange', updateBattery)
-                }
+                updateBatteryFn()
+                bat.addEventListener('chargingchange', updateBatteryFn)
+                bat.addEventListener('levelchange', updateBatteryFn)
               })
+            }
+
+            return () => {
+              active = false
+              if (batteryObj && updateBatteryFn) {
+                batteryObj.removeEventListener('chargingchange', updateBatteryFn)
+                batteryObj.removeEventListener('levelchange', updateBatteryFn)
+              }
             }
           }, [zebarBattery])
 
@@ -2397,28 +2399,54 @@
         }
 
         useEffect(() => {
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
           if (isDialogOpen) {
-            anime.remove('.inline-pomodoro-settings')
-            anime({
-              targets: '.inline-pomodoro-settings',
-              maxWidth: [0, 370],
-              marginLeft: [0, 12],
-              opacity: [0, 1],
-              scale: [0.96, 1],
-              duration: 850,
-              easing: 'spring(1, 95, 15, 0)',
-            })
+            if (prefersReduced) {
+              anime.set('.inline-pomodoro-settings', {
+                maxWidth: 370,
+                marginLeft: 12,
+                opacity: 1,
+                scale: 1,
+              })
+            } else {
+              anime.remove('.inline-pomodoro-settings')
+              const anim = anime({
+                targets: '.inline-pomodoro-settings',
+                maxWidth: [0, 370],
+                marginLeft: [0, 12],
+                opacity: [0, 1],
+                scale: [0.96, 1],
+                duration: 850,
+                easing: 'spring(1, 95, 15, 0)',
+              })
+              AnimationManager.register('pomodoro-settings', anim)
+            }
           } else {
-            anime.remove('.inline-pomodoro-settings')
-            anime({
-              targets: '.inline-pomodoro-settings',
-              maxWidth: [370, 0],
-              marginLeft: [12, 0],
-              opacity: [1, 0],
-              scale: [1, 0.96],
-              duration: 650,
-              easing: 'spring(1, 95, 15, 0)',
-            })
+            if (prefersReduced) {
+              anime.set('.inline-pomodoro-settings', {
+                maxWidth: 0,
+                marginLeft: 0,
+                opacity: 0,
+                scale: 0.96,
+              })
+            } else {
+              anime.remove('.inline-pomodoro-settings')
+              const anim = anime({
+                targets: '.inline-pomodoro-settings',
+                maxWidth: [370, 0],
+                marginLeft: [12, 0],
+                opacity: [1, 0],
+                scale: [1, 0.96],
+                duration: 650,
+                easing: 'spring(1, 95, 15, 0)',
+              })
+              AnimationManager.register('pomodoro-settings', anim)
+            }
+          }
+
+          return () => {
+            AnimationManager.cleanup('pomodoro-settings')
           }
         }, [isDialogOpen])
 
@@ -2968,22 +2996,24 @@
               anime.set('.arch-quick-actions', { opacity: 1, marginLeft: 12 })
               anime.set('.arch-quick-actions .action-btn', { scale: 1, opacity: 1 })
             } else {
-              anime({
+              const archAnim = anime({
                 targets: '.island-arch',
                 maxWidth: [32, 450],
                 duration: 850,
                 easing: 'spring(1, 95, 15, 0)',
               })
+              AnimationManager.register('app-arch', archAnim)
 
-              anime({
+              const actionsAnim = anime({
                 targets: '.arch-quick-actions',
                 opacity: [0, 1],
                 marginLeft: [0, 12],
                 duration: 400,
                 easing: 'easeOutQuad',
               })
+              AnimationManager.register('app-quick-actions', actionsAnim)
 
-              anime({
+              const btnAnim = anime({
                 targets: '.arch-quick-actions .action-btn',
                 scale: [0.75, 1],
                 opacity: [0, 1],
@@ -2991,6 +3021,7 @@
                 easing: 'easeOutElastic(1, 0.85)',
                 delay: anime.stagger(45, { start: 150 }),
               })
+              AnimationManager.register('app-action-btn', btnAnim)
             }
           } else {
             anime.remove('.island-arch')
@@ -3001,21 +3032,29 @@
               anime.set('.island-arch', { maxWidth: '32px' })
               anime.set('.arch-quick-actions', { opacity: 0, marginLeft: 0 })
             } else {
-              anime({
+              const archAnim = anime({
                 targets: '.island-arch',
                 maxWidth: 32,
                 duration: 450,
                 easing: 'cubicBezier(0.16, 1, 0.3, 1)',
               })
+              AnimationManager.register('app-arch', archAnim)
 
-              anime({
+              const actionsAnim = anime({
                 targets: '.arch-quick-actions',
                 opacity: [1, 0],
                 marginLeft: [12, 0],
                 duration: 300,
                 easing: 'cubicBezier(0.16, 1, 0.3, 1)',
               })
+              AnimationManager.register('app-quick-actions', actionsAnim)
             }
+          }
+
+          return () => {
+            AnimationManager.cleanup('app-arch')
+            AnimationManager.cleanup('app-quick-actions')
+            AnimationManager.cleanup('app-action-btn')
           }
         }, [isTrayOpen])
 
@@ -3172,65 +3211,94 @@
 
         // Initial entrance sequence of Floating Archipelago + Staggered Capsules
         useEffect(() => {
-          anime({
-            targets: '.island-arch',
-            translateX: [-150, 0],
-            opacity: [0, 1],
-            scale: [0.8, 1],
-            easing: 'easeOutElastic(1, 0.85)',
-            duration: 1200,
-            delay: 50,
-          })
+          const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-          anime({
-            targets: '.island-left',
-            translateX: [-120, 0],
-            opacity: [0, 1],
-            scale: [0.9, 1],
-            easing: 'easeOutElastic(1, 0.85)',
-            duration: 1200,
-            delay: 150,
-          })
-
-          anime({
-            targets: '.island-center',
-            translateY: [-60, 0],
-            opacity: [0, 1],
-            scale: [0.92, 1],
-            easing: 'easeOutElastic(1, 0.85)',
-            duration: 1300,
-            delay: 250,
-          })
-
-          anime({
-            targets: '.island-album',
-            translateY: [-60, 0],
-            opacity: [0, 1],
-            scale: [0.92, 1],
-            easing: 'easeOutElastic(1, 0.85)',
-            duration: 1300,
-            delay: 300,
-          })
-
-          anime({
-            targets: '.island-right',
-            translateX: [120, 0],
-            opacity: [0, 1],
-            scale: [0.9, 1],
-            easing: 'easeOutElastic(1, 0.85)',
-            duration: 1200,
-            delay: 380,
-          })
-
-          anime({
-            targets:
+          if (prefersReduced) {
+            anime.set('.island-arch', { translateX: 0, opacity: 1, scale: 1 })
+            anime.set('.island-left', { translateX: 0, opacity: 1, scale: 1 })
+            anime.set('.island-center', { translateY: 0, opacity: 1, scale: 1 })
+            anime.set('.island-album', { translateY: 0, opacity: 1, scale: 1 })
+            anime.set('.island-right', { translateX: 0, opacity: 1, scale: 1 })
+            anime.set(
               '.island-arch > .arch-glass-capsule, .island-left > *, .island-center > *, .island-album > *, .island-right > *',
-            scale: [0.75, 1],
-            opacity: [0, 1],
-            delay: anime.stagger(40, { start: 650 }),
-            easing: 'easeOutBack',
-            duration: 600,
-          })
+              { scale: 1, opacity: 1 }
+            )
+          } else {
+            const archAnim = anime({
+              targets: '.island-arch',
+              translateX: [-150, 0],
+              opacity: [0, 1],
+              scale: [0.8, 1],
+              easing: 'easeOutElastic(1, 0.85)',
+              duration: 1200,
+              delay: 50,
+            })
+            AnimationManager.register('entrance-arch', archAnim)
+
+            const leftAnim = anime({
+              targets: '.island-left',
+              translateX: [-120, 0],
+              opacity: [0, 1],
+              scale: [0.9, 1],
+              easing: 'easeOutElastic(1, 0.85)',
+              duration: 1200,
+              delay: 150,
+            })
+            AnimationManager.register('entrance-left', leftAnim)
+
+            const centerAnim = anime({
+              targets: '.island-center',
+              translateY: [-60, 0],
+              opacity: [0, 1],
+              scale: [0.92, 1],
+              easing: 'easeOutElastic(1, 0.85)',
+              duration: 1300,
+              delay: 250,
+            })
+            AnimationManager.register('entrance-center', centerAnim)
+
+            const albumAnim = anime({
+              targets: '.island-album',
+              translateY: [-60, 0],
+              opacity: [0, 1],
+              scale: [0.92, 1],
+              easing: 'easeOutElastic(1, 0.85)',
+              duration: 1300,
+              delay: 300,
+            })
+            AnimationManager.register('entrance-album', albumAnim)
+
+            const rightAnim = anime({
+              targets: '.island-right',
+              translateX: [120, 0],
+              opacity: [0, 1],
+              scale: [0.9, 1],
+              easing: 'easeOutElastic(1, 0.85)',
+              duration: 1200,
+              delay: 380,
+            })
+            AnimationManager.register('entrance-right', rightAnim)
+
+            const staggerAnim = anime({
+              targets:
+                '.island-arch > .arch-glass-capsule, .island-left > *, .island-center > *, .island-album > *, .island-right > *',
+              scale: [0.75, 1],
+              opacity: [0, 1],
+              delay: anime.stagger(40, { start: 650 }),
+              easing: 'easeOutBack',
+              duration: 600,
+            })
+            AnimationManager.register('entrance-stagger', staggerAnim)
+          }
+
+          return () => {
+            AnimationManager.cleanup('entrance-arch')
+            AnimationManager.cleanup('entrance-left')
+            AnimationManager.cleanup('entrance-center')
+            AnimationManager.cleanup('entrance-album')
+            AnimationManager.cleanup('entrance-right')
+            AnimationManager.cleanup('entrance-stagger')
+          }
         }, [])
 
         // Initialize Canvas Confetti to use a background Web Worker (OffscreenCanvas)
