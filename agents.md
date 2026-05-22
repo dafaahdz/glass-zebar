@@ -83,3 +83,195 @@ When adding or updating a widget, agents must complete each step in order:
   Use `useAnime` or track Anime.js instances in the global `AnimationManager` to guarantee zero memory leaks upon unmounting.
 * [ ] **Step 5: Motion Accessibility Check**
   Verify the widget skips animations gracefully if the system's `prefers-reduced-motion: reduce` media query is active.
+
+---
+
+## 📚 6. Zebar API Reference (TypeScript Typings)
+
+Use these type signatures to construct provider configs and use outputs directly without extra research:
+
+### Global Methods
+- `zebar.createProviderGroup(configMap: ProviderGroupConfig): ProviderGroup`
+- `zebar.createProvider(config: ProviderConfig): Provider`
+- `zebar.currentWidget(): Widget`
+- `zebar.startWidget(widgetName: string, placement: WidgetPlacement, args: StartWidgetArgs): Promise<void>`
+- `zebar.startWidgetPreset(widgetName: string, presetName: string, args?: StartWidgetPresetArgs): Promise<void>`
+- `zebar.shellExec(program: string, args?: string | string[], options?: ShellCommandOptions): Promise<ShellExecOutput>`
+- `zebar.shellSpawn(program: string, args?: string | string[], options?: ShellCommandOptions): Promise<ShellProcess>`
+
+### Providers Config & Output Map
+
+#### 1. GlazeWM (`type: 'glazewm'`)
+Exposes workspace and monitor info from the GlazeWM tiling window manager.
+- **Output:**
+  ```typescript
+  displayedWorkspace: Workspace;
+  focusedWorkspace: Workspace;
+  currentWorkspaces: Workspace[];
+  allWorkspaces: Workspace[];
+  allMonitors: Monitor[];
+  allWindows: Window[];
+  focusedMonitor: Monitor;
+  currentMonitor: Monitor;
+  focusedContainer: Container;
+  tilingDirection: TilingDirection; // 'horizontal' | 'vertical'
+  bindingModes: BindingModeConfig[];
+  isPaused: boolean;
+  runCommand(command: string, subjectContainerId?: string): Promise<RunCommandResponse>;
+  ```
+
+#### 2. Media (`type: 'media'`)
+Exposes playback controls and metadata for currently active media players.
+- **Output:**
+  ```typescript
+  currentSession: MediaSession | null;
+  allSessions: MediaSession[];
+  play(options?: MediaControlOptions): void;
+  pause(options?: MediaControlOptions): void;
+  togglePlayPause(options?: MediaControlOptions): void;
+  next(options?: MediaControlOptions): void;
+  previous(options?: MediaControlOptions): void;
+  ```
+- **`MediaSession` Object:**
+  ```typescript
+  sessionId: string;
+  title: string | null;
+  artist: string | null;
+  albumTitle: string | null;
+  albumArtist: string | null;
+  trackNumber: number;
+  startTime: number; // in seconds
+  endTime: number;   // in seconds (total duration)
+  position: number;  // in seconds (updates every 5s from GSMTC timeline refresh)
+  isPlaying: boolean;
+  isCurrentSession: boolean;
+  ```
+
+#### 3. Audio (`type: 'audio'`)
+Controls system audio devices and master volume.
+- **Output:**
+  ```typescript
+  defaultPlaybackDevice: AudioDevice | null;
+  defaultRecordingDevice: AudioDevice | null;
+  playbackDevices: AudioDevice[];
+  recordingDevices: AudioDevice[];
+  setVolume(volume: number, options?: SetVolumeOptions): Promise<void>;
+  setMute(mute: boolean, options?: SetMuteOptions): Promise<void>;
+  ```
+- **`AudioDevice` Object:**
+  ```typescript
+  deviceId: string;
+  name: string;
+  volume: number; // 0-100
+  type: AudioDeviceType; // 'playback' | 'recording'
+  isDefaultPlayback: boolean;
+  isDefaultRecording: boolean;
+  isMuted: boolean;
+  ```
+
+#### 4. Battery (`type: 'battery'`)
+Exposes battery charge percentage and power state.
+- **Output:**
+  ```typescript
+  chargePercent: number; // 0-100
+  cycleCount: number;
+  healthPercent: number;
+  powerConsumption: number; // in Watts
+  state: 'discharging' | 'charging' | 'full' | 'empty' | 'unknown';
+  isCharging: boolean;
+  timeTillEmpty: number | null; // in minutes
+  timeTillFull: number | null;
+  voltage: number | null;
+  ```
+
+#### 5. Network (`type: 'network'`)
+Exposes network interfaces and internet speed traffic.
+- **Output:**
+  ```typescript
+  defaultInterface: NetworkInterface | null;
+  defaultGateway: NetworkGateway | null;
+  interfaces: NetworkInterface[];
+  traffic: NetworkTraffic | null;
+  ```
+- **`NetworkInterface` Object:**
+  ```typescript
+  name: string;
+  friendlyName: string | null;
+  description: string | null;
+  type: InterfaceType; // 'wifi' | 'ethernet' | 'loopback' | etc.
+  ipv4Addresses: string[];
+  ipv6Addresses: string[];
+  macAddress: string | null;
+  isDefault: boolean;
+  ```
+- **`NetworkGateway` Object:**
+  ```typescript
+  ssid: string | null; // WiFi SSID
+  signalStrength: number | null; // 0-100
+  ```
+- **`NetworkTraffic` Object:**
+  ```typescript
+  received: DataSizeMeasure; // bytes, siValue, siUnit, iecValue, iecUnit
+  transmitted: DataSizeMeasure;
+  ```
+
+#### 6. CPU (`type: 'cpu'`)
+Exposes system processor statistics.
+- **Output:**
+  ```typescript
+  frequency: number; // in MHz
+  usage: number; // 0-100
+  logicalCoreCount: number;
+  physicalCoreCount: number;
+  vendor: string;
+  ```
+
+#### 7. Memory (`type: 'memory'`)
+Exposes RAM and swap utilization statistics.
+- **Output:**
+  ```typescript
+  usage: number; // 0-100
+  freeMemory: number; // in bytes
+  usedMemory: number;
+  totalMemory: number;
+  ```
+
+#### 8. Weather (`type: 'weather'`)
+Exposes current weather conditions.
+- **Output:**
+  ```typescript
+  isDaytime: boolean;
+  status: WeatherStatus; // 'clear_day' | 'clear_night' | 'cloudy_day' | etc.
+  celsiusTemp: number;
+  fahrenheitTemp: number;
+  windSpeed: number;
+  ```
+
+#### 9. Date (`type: 'date'`)
+Exposes current system date/time.
+- **Output:**
+  ```typescript
+  formatted: string; // Formatted date string based on `formatting` option
+  new: Date;
+  now: number; // epoch ms
+  iso: string;
+  ```
+
+#### 10. Systray (`type: 'systray'`)
+Exposes active system tray icons and provides mouse action handlers.
+- **Output:**
+  ```typescript
+  icons: SystrayIcon[];
+  onHoverEnter(iconId: string): Promise<void>;
+  onHoverLeave(iconId: string): Promise<void>;
+  onHoverMove(iconId: string): Promise<void>;
+  onRightClick(iconId: string): Promise<void>;
+  onLeftClick(iconId: string): Promise<void>;
+  onMiddleClick(iconId: string): Promise<void>;
+  ```
+- **`SystrayIcon` Object:**
+  ```typescript
+  id: string;
+  iconUrl: string; // Data URL for rendering icon in <img>
+  tooltip: string;
+  ```
