@@ -2029,3 +2029,77 @@ body,
   }
 }
 
+/* GlazeWM Window Controls Widget Styling */
+.glaze-window-pill {
+  transition: max-width 0.4s cubic-bezier(0.16, 1, 0.3, 1), padding 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  max-width: 130px; /* Default collapsed title-only size */
+}
+
+.glaze-window-pill .value {
+  font-weight: 600;
+  transition: opacity 0.3s ease;
+  white-space: nowrap;
+}
+
+.glaze-window-pill .window-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 0px;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: max-width 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+/* Expand container and reveal buttons on hover */
+.glaze-window-pill:hover {
+  max-width: 230px; /* Room for title + buttons */
+}
+
+.glaze-window-pill:hover .window-controls {
+  max-width: 90px;
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+
+.win-btn {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--ethereal-text-dim) !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px !important;
+  height: 18px !important;
+  width: 18px !important;
+  min-width: 18px !important;
+  border-radius: 9999px !important;
+  font-size: 10px !important;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.win-btn i {
+  margin-right: 0 !important;
+  font-size: 10px !important;
+}
+
+.win-btn:hover {
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: var(--kawaii-teal) !important;
+  transform: scale(1.2);
+}
+
+.win-btn.win-close:hover {
+  background: rgba(244, 63, 94, 0.2) !important;
+  color: #f43f5e !important;
+}
+

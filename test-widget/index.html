@@ -523,13 +523,14 @@
           // Debounce network updates to 500ms
           useEffect(() => {
             const handle = setInterval(() => {
+              const currentNetwork = providers.outputMap.network
               setTraffic({
-                transmit: network.traffic?.transmit || 0,
-                receive: network.traffic?.receive || 0,
+                transmit: currentNetwork?.traffic?.transmit || 0,
+                receive: currentNetwork?.traffic?.receive || 0,
               })
             }, 500)
             return () => clearInterval(handle)
-          }, [network])
+          }, [])
 
           // Spring physics expansion drawer orchestrated by Anime.js
           useEffect(() => {
@@ -1047,7 +1048,7 @@
                   x: Math.random() * w,
                   y: Math.random() * h - h,
                   len: 4 + Math.random() * 6,
-                  speed: 2 + Math.random() * 2,
+                  speed: 4 + Math.random() * 4, // Doubled speed for 30fps frame capping
                   opacity: 0.15 + Math.random() * 0.25,
                 })
               }
@@ -1057,7 +1058,7 @@
                   x: Math.random() * w,
                   y: Math.random() * h - h,
                   r: 1.0 + Math.random() * 1.5,
-                  speed: 0.4 + Math.random() * 0.5,
+                  speed: 0.8 + Math.random() * 1.0, // Doubled speed for 30fps frame capping
                   wiggle: Math.random() * 100,
                   opacity: 0.2 + Math.random() * 0.4,
                 })
@@ -1066,14 +1067,28 @@
               // Sunny rotating ray rays
               particles.push({
                 angle: 0,
-                speed: 0.006,
+                speed: 0.012, // Doubled speed for 30fps frame capping
               })
             }
 
             let animId = null
             let fadeOpacity = isHovered ? 1 : 0
+            let lastDrawTime = 0
+            const fpsInterval = 1000 / 30 // Capping to 30fps
 
-            const draw = () => {
+            const draw = (timestamp) => {
+              const now = timestamp || performance.now()
+              const elapsed = now - lastDrawTime
+
+              if (elapsed < fpsInterval) {
+                if (isHovered || fadeOpacity > 0) {
+                  animId = requestAnimationFrame(draw)
+                }
+                return
+              }
+
+              lastDrawTime = now - (elapsed % fpsInterval)
+
               ctx.clearRect(0, 0, w, h)
               ctx.globalAlpha = fadeOpacity
 
@@ -1462,6 +1477,61 @@
           }
           return true
         },
+      )
+ 
+      // GlazeWM Focused Window Widget with dynamic details and control actions
+      const GlazeWindowWidget = React.memo(
+        ({ glazewm }) => {
+          if (!glazewm || !glazewm.focusedContainer) return null
+
+          const { title } = glazewm.focusedContainer
+          if (!title) return null
+
+          // Truncate title to fit without layout breaks
+          const truncatedTitle = title.length > 20 ? title.substring(0, 18) + '...' : title
+
+          return (
+            <div className="status-pill glaze-window-pill" style={{ '--pill-color': 'var(--kawaii-teal)' }}>
+              <i className="nf nf-md-application_outline"></i>
+              <span className="value">{truncatedTitle}</span>
+              <div className="window-controls">
+                <button
+                  className="win-btn win-float"
+                  title="Toggle Floating"
+                  onClick={() => glazewm.runCommand('toggle-floating')}
+                >
+                  <i className="nf nf-md-dock_window"></i>
+                </button>
+                <button
+                  className="win-btn win-minimize"
+                  title="Minimize"
+                  onClick={() => glazewm.runCommand('toggle-minimized')}
+                >
+                  <i className="nf nf-md-minus"></i>
+                </button>
+                <button
+                  className="win-btn win-maximize"
+                  title="Fullscreen"
+                  onClick={() => glazewm.runCommand('toggle-fullscreen')}
+                >
+                  <i className="nf nf-md-window_maximize"></i>
+                </button>
+                <button
+                  className="win-btn win-close"
+                  title="Close Window"
+                  onClick={() => glazewm.runCommand('close')}
+                >
+                  <i className="nf nf-md-close"></i>
+                </button>
+              </div>
+            </div>
+          )
+        },
+        (prev, next) => {
+          if (!prev.glazewm || !next.glazewm) return prev.glazewm === next.glazewm
+          return prev.glazewm.focusedContainer?.id === next.glazewm.focusedContainer?.id &&
+                 prev.glazewm.focusedContainer?.title === next.glazewm.focusedContainer?.title
+        }
       )
 
       // Kinetic Ticker Digit Component (Opsi G)
@@ -3106,6 +3176,22 @@
               return
             }
 
+            const cacheKey = `lfm_cache_${cleanArtist}_${cleanTitle}`.toLowerCase().replace(/[^a-z0-9_]/g, '_')
+            try {
+              const cachedData = await dbStore.get(cacheKey)
+              if (cachedData) {
+                console.log('[Last.fm] Cache hit:', cachedData)
+                setAlbumCover(cachedData.cover)
+                setDominantColor(cachedData.color)
+                setAlbumName(cachedData.albumTitle)
+                if (cachedData.playCount !== undefined) {
+                  setPlayCount(cachedData.playCount)
+                }
+              }
+            } catch (err) {
+              console.error('[Last.fm] Cache read error:', err)
+            }
+
             try {
               console.log(
                 `[Last.fm] Fetching track: "${cleanTitle}" by "${cleanArtist}" for user "${lastfmUsername}" (raw: "${title}" by "${artist}")`,
@@ -3126,12 +3212,23 @@
                 setPlayCount(pc)
                 setAlbumName(albumTitle)
 
+                let color = 'rgba(255, 255, 255, 0.03)'
                 if (cover) {
-                  const color = await extractDominantColor(cover)
+                  color = await extractDominantColor(cover)
                   setDominantColor(color)
                 } else {
-                  setDominantColor('rgba(255, 255, 255, 0.03)')
+                  setDominantColor(color)
                 }
+
+                // Save to cache
+                const cacheData = {
+                  cover,
+                  color,
+                  albumTitle,
+                  playCount: pc,
+                }
+                await dbStore.set(cacheKey, cacheData)
+                console.log('[Last.fm] Saved to cache:', cacheData)
 
                 // Celebrate Milestones with beautiful Toast and Canvas Confetti!
                 if (pc && pc > 0) {
@@ -3407,6 +3504,7 @@
               <div className="left island-left" style={{ margin: 0, '--island-glow-color': 'rgba(52, 211, 153, 0.25)' }}>
                 <WorkspaceWidget glazewm={output.glazewm} />
                 <GlazeControlsWidget glazewm={output.glazewm} />
+                <GlazeWindowWidget glazewm={output.glazewm} />
               </div>
             </div>
 
