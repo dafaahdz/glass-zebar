@@ -63,11 +63,14 @@
           this.dbName = dbName
           this.storeName = storeName
           this.db = null
+          this.dbPromise = null
         }
 
         init() {
           if (this.db) return Promise.resolve(this.db)
-          return new Promise((resolve, reject) => {
+          if (this.dbPromise) return this.dbPromise
+
+          this.dbPromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, 1)
             request.onupgradeneeded = (e) => {
               const db = e.target.result
@@ -77,10 +80,15 @@
             }
             request.onsuccess = (e) => {
               this.db = e.target.result
+              this.dbPromise = null
               resolve(this.db)
             }
-            request.onerror = (e) => reject(e.target.error)
+            request.onerror = (e) => {
+              this.dbPromise = null
+              reject(e.target.error)
+            }
           })
+          return this.dbPromise
         }
 
         async get(key, defaultValue) {
