@@ -121,6 +121,8 @@ body {
   font-size: var(--text-size);
   overflow: hidden;
   letter-spacing: -0.02em;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 .value,
@@ -380,6 +382,8 @@ body,
   padding-right: 16px !important;
   letter-spacing: -0.01em;
   transition:
+    max-width 0.85s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1),
     background 0.4s ease,
     border-color 0.4s ease,
     box-shadow 0.4s ease !important;
@@ -2101,5 +2105,14 @@ body,
 .win-btn.win-close:hover {
   background: rgba(244, 63, 94, 0.2) !important;
   color: #f43f5e !important;
+}
+
+/* 3.1 Hardware Acceleration (CSS GPU) */
+.status-pill,
+.vinyl-wrapper,
+.rpg-life-bar,
+.arch-quick-actions .action-btn {
+  will-change: transform, opacity;
+  transform: translate3d(0, 0, 0);
 }
 

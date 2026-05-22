@@ -203,7 +203,16 @@
             this.instances.delete(id)
           }
         },
-
+        pauseAll() {
+          this.instances.forEach((instance) => {
+            try { instance.pause() } catch (e) {}
+          })
+        },
+        resumeAll() {
+          this.instances.forEach((instance) => {
+            try { instance.play() } catch (e) {}
+          })
+        },
         cleanupAll() {
           for (const [id] of this.instances) {
             this.cleanup(id)
@@ -462,15 +471,28 @@
         ...props
       }) => {
         const pillRef = useRef(null)
+        const frameRef = useRef(null)
 
         const handleMouseMove = (e) => {
-          const rect = e.currentTarget.getBoundingClientRect()
-          const x = (e.clientX - rect.left - rect.width / 2) * 0.04
-          const y = (e.clientY - rect.top - rect.height / 2) * 0.08
-          e.currentTarget.style.setProperty('--magnet-x', `${x}px`)
-          e.currentTarget.style.setProperty('--magnet-y', `${y}px`)
+          if (frameRef.current) return
+          const currentTarget = e.currentTarget
+          const rect = currentTarget.getBoundingClientRect()
+          const clientX = e.clientX
+          const clientY = e.clientY
+          
+          frameRef.current = requestAnimationFrame(() => {
+            const x = (clientX - rect.left - rect.width / 2) * 0.04
+            const y = (clientY - rect.top - rect.height / 2) * 0.08
+            currentTarget.style.setProperty('--magnet-x', `${x}px`)
+            currentTarget.style.setProperty('--magnet-y', `${y}px`)
+            frameRef.current = null
+          })
         }
         const handleMouseLeave = (e) => {
+          if (frameRef.current) {
+            cancelAnimationFrame(frameRef.current)
+            frameRef.current = null
+          }
           e.currentTarget.style.setProperty('--magnet-x', '0px')
           e.currentTarget.style.setProperty('--magnet-y', '0px')
         }
@@ -902,11 +924,17 @@
             }
           }, [isHovered])
 
-          if (!battery) return null
-
-          try {
+          const { isCharging, statusClass, statusIcon, chargeStatus } = useMemo(() => {
+            if (!battery) {
+              return {
+                isCharging: false,
+                statusClass: 'battery-high',
+                statusIcon: 'nf-fa-battery_0',
+                chargeStatus: 'Discharging'
+              }
+            }
             const stateLower = String(battery.state || '').toLowerCase()
-            const isCharging =
+            const charging =
               battery.isCharging === true ||
               String(battery.isCharging).toLowerCase() === 'true' ||
               stateLower === 'charging' ||
@@ -915,29 +943,41 @@
               stateLower === 'fullycharged' ||
               stateLower === 'fully charged'
 
-            const getBatteryStatusClass = (chargePercent, chargingState) => {
-              if (chargingState) return 'battery-charging'
-              if (chargePercent <= 15) return 'battery-critical'
-              if (chargePercent <= 25) return 'battery-warning'
-              return 'battery-high'
+            let sClass = 'battery-high'
+            if (charging) sClass = 'battery-charging'
+            else if (level <= 15) sClass = 'battery-critical'
+            else if (level <= 25) sClass = 'battery-warning'
+
+            let sIcon = 'nf-fa-battery_0'
+            if (charging) {
+              if (level > 90) sIcon = 'nf-md-battery_charging_100'
+              else if (level > 70) sIcon = 'nf-md-battery_charging_80'
+              else if (level > 40) sIcon = 'nf-md-battery_charging_60'
+              else if (level > 20) sIcon = 'nf-md-battery_charging_30'
+              else sIcon = 'nf-md-battery_charging_outline'
+            } else {
+              if (level > 90) sIcon = 'nf-fa-battery_4'
+              else if (level > 70) sIcon = 'nf-fa-battery_3'
+              else if (level > 40) sIcon = 'nf-fa-battery_2'
+              else if (level > 20) sIcon = 'nf-fa-battery_1'
             }
 
-            const getBatteryIcon = (chargePercent, chargingState) => {
-              if (chargingState) {
-                if (chargePercent > 90) return 'nf-md-battery_charging_100'
-                if (chargePercent > 70) return 'nf-md-battery_charging_80'
-                if (chargePercent > 40) return 'nf-md-battery_charging_60'
-                if (chargePercent > 20) return 'nf-md-battery_charging_30'
-                return 'nf-md-battery_charging_outline'
-              }
-              if (chargePercent > 90) return 'nf-fa-battery_4'
-              if (chargePercent > 70) return 'nf-fa-battery_3'
-              if (chargePercent > 40) return 'nf-fa-battery_2'
-              if (chargePercent > 20) return 'nf-fa-battery_1'
-              return 'nf-fa-battery_0'
+            return {
+              isCharging: charging,
+              statusClass: sClass,
+              statusIcon: sIcon,
+              chargeStatus: charging ? 'Charging' : 'Discharging'
             }
+          }, [battery?.isCharging, battery?.state, level])
 
-            const chargeStatus = isCharging ? 'Charging' : 'Discharging'
+          if (!battery) return null
+
+          try {
+            // Helper functions to satisfy existing JSX calls seamlessly
+            const getBatteryStatusClass = () => statusClass
+            const getBatteryIcon = () => statusIcon
+
+            const chargeStatusVar = chargeStatus
             const tooltipText = `${chargeStatus} (${Math.round(battery.chargePercent)}%)`
 
             const valueText = isCharging
