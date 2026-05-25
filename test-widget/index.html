@@ -443,10 +443,31 @@
         const [output, setOutput] = useState(providers.outputMap)
         useEffect(() => {
           let frameId = null
+          let lastUpdate = 0
+          
           const handleOutput = () => {
             if (frameId) return
+
+            const map = providers.outputMap
+
+            // Phase 1: Visibility Observer Suspend (GlazeWM Fullscreen Detection)
+            if (map.glazewm && map.glazewm.allWindows) {
+              const hasFullscreen = map.glazewm.allWindows.some(w => w.state === 'fullscreen' || (w.hasFocus && w.isFloating && w.width > 1900 && w.height > 1000))
+              if (hasFullscreen) return // Suspend updates entirely to save CPU
+            }
+
+            // Phase 1: Battery-Aware Polling Rates
+            let throttleMs = 0
+            if (map.battery && map.battery.chargePercent < 20 && !map.battery.isCharging) {
+              throttleMs = 2500 // throttle to 2.5s if low battery
+            }
+
+            const now = performance.now()
+            if (now - lastUpdate < throttleMs) return
+
             frameId = requestAnimationFrame(() => {
-              setOutput({ ...providers.outputMap })
+              setOutput({ ...map })
+              lastUpdate = performance.now()
               frameId = null
             })
           }
@@ -457,6 +478,18 @@
           }
         }, [])
         return output
+      }
+
+      // Phase 1: Throttled callback for Shell Executions
+      function useThrottleCallback(callback, delay) {
+        const lastCall = useRef(0)
+        return (...args) => {
+          const now = Date.now()
+          if (now - lastCall.current >= delay) {
+            lastCall.current = now
+            callback(...args)
+          }
+        }
       }
 
       // Reusable Status Pill Component
@@ -475,6 +508,9 @@
 
         const handleMouseMove = (e) => {
           if (frameRef.current) return
+          // Phase 1: Magnet Physics Thresholding
+          if (Math.abs(e.movementX) + Math.abs(e.movementY) < 5) return
+
           const currentTarget = e.currentTarget
           const rect = currentTarget.getBoundingClientRect()
           const clientX = e.clientX
@@ -1912,18 +1948,18 @@
               <div className="media-controls">
                 <i
                   className="nf nf-md-skip_previous"
-                  onClick={(e) => {
+                  onClick={useThrottleCallback((e) => {
                     window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
                     media.previous?.()
-                  }}
+                  }, 500)}
                   title="Previous"
                 ></i>
                 <div
                   className="media-play-pause-btn"
-                  onClick={(e) => {
+                  onClick={useThrottleCallback((e) => {
                     window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
                     media.togglePlayPause?.()
-                  }}
+                  }, 500)}
                   title="Play/Pause"
                 >
                   <i
@@ -1935,10 +1971,10 @@
                 </div>
                 <i
                   className="nf nf-md-skip_next"
-                  onClick={(e) => {
+                  onClick={useThrottleCallback((e) => {
                     window.triggerRipple(e, 'rgba(232, 215, 255, 0.3)')
                     media.next?.()
-                  }}
+                  }, 500)}
                   title="Next"
                 ></i>
               </div>
