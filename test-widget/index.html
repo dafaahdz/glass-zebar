@@ -724,10 +724,49 @@
         },
       )
 
-      // Memory Widget Component
+      // Phase 3: Memory Widget Component (Expandable)
       const MemoryWidget = React.memo(
         ({ memory }) => {
           if (!memory) return null
+          
+          const [isHovered, setIsHovered] = useState(false)
+          const textRef = useRef(null)
+
+          useEffect(() => {
+            if (!textRef.current) return
+            const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            
+            if (isHovered) {
+              if (prefersReduced) {
+                anime.set(textRef.current, { maxWidth: '100px', opacity: 0.8, marginLeft: '6px' })
+              } else {
+                const anim = anime({
+                  targets: textRef.current,
+                  maxWidth: '100px',
+                  opacity: 0.8,
+                  marginLeft: '6px',
+                  duration: 600,
+                  easing: 'easeOutElastic(1, 0.8)',
+                })
+                AnimationManager.register('memory-text', anim)
+              }
+            } else {
+              if (prefersReduced) {
+                anime.set(textRef.current, { maxWidth: 0, opacity: 0, marginLeft: 0 })
+              } else {
+                const anim = anime({
+                  targets: textRef.current,
+                  maxWidth: 0,
+                  opacity: 0,
+                  marginLeft: 0,
+                  duration: 300,
+                  easing: 'cubicBezier(0.16, 1, 0.3, 1)',
+                })
+                AnimationManager.register('memory-text', anim)
+              }
+            }
+            return () => AnimationManager.cleanup('memory-text')
+          }, [isHovered])
 
           const usage = Math.round(memory.usage)
           const memoryColor =
@@ -737,13 +776,38 @@
                 ? 'var(--kawaii-yellow)'
                 : 'var(--kawaii-teal)'
 
+          const formatBytesToGB = (bytes) => (bytes / (1024 * 1024 * 1024)).toFixed(1)
+          const usedStr = formatBytesToGB(memory.usedMemory)
+          const totalStr = formatBytesToGB(memory.totalMemory)
+
           return (
-            <StatusPill
-              className="memory"
-              icon="nf-fae-chip"
-              value={`${usage}%`}
-              style={{ '--pill-color': memoryColor }}
-            />
+            <div onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)} style={{ display: 'inline-block' }}>
+              <StatusPill
+                className={`memory ${isHovered ? 'expanded' : ''}`}
+                icon="nf-fae-chip"
+                value={`${usage}%`}
+                style={{ '--pill-color': memoryColor }}
+                appendContent={
+                  <span
+                    ref={textRef}
+                    style={{
+                      display: 'inline-block',
+                      overflow: 'hidden',
+                      whiteSpace: 'nowrap',
+                      maxWidth: 0,
+                      opacity: 0,
+                      marginLeft: 0,
+                      fontSize: '11px',
+                      fontWeight: 600,
+                      color: 'var(--ethereal-text-dim)',
+                      verticalAlign: 'middle',
+                    }}
+                  >
+                    {usedStr} / {totalStr} GB
+                  </span>
+                }
+              />
+            </div>
           )
         },
         (prev, next) => Math.round(prev.memory?.usage || 0) === Math.round(next.memory?.usage || 0),
