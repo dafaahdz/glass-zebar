@@ -1712,27 +1712,52 @@
         (prev, next) => prev.date?.formatted === next.date?.formatted,
       )
 
-      // Helper function for ultra-fast 1-pixel HTML5 canvas dominant color average extraction
+      // Phase 2: Web Worker Offloading for ultra-fast dominant color extraction without blocking Main Thread
+      const colorWorkerCode = `
+        self.onmessage = async function(e) {
+          const { imgUrl, id } = e.data;
+          try {
+            const response = await fetch(imgUrl, { mode: 'cors' });
+            const blob = await response.blob();
+            const bitmap = await createImageBitmap(blob);
+            
+            const canvas = new OffscreenCanvas(1, 1);
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(bitmap, 0, 0, 1, 1);
+            const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+            self.postMessage({ id, color: 'rgba(' + r + ', ' + g + ', ' + b + ', 0.38)' });
+          } catch(err) {
+            self.postMessage({ id, color: 'rgba(255, 255, 255, 0.03)' });
+          }
+        };
+      `;
+      const colorWorkerBlob = new Blob([colorWorkerCode], { type: 'application/javascript' });
+      const colorWorker = new Worker(URL.createObjectURL(colorWorkerBlob));
+      
+      let extractionId = 0;
+      const extractionPromises = new Map();
+      colorWorker.onmessage = (e) => {
+        const { id, color } = e.data;
+        if (extractionPromises.has(id)) {
+          extractionPromises.get(id)(color);
+          extractionPromises.delete(id);
+        }
+      };
+
       const extractDominantColor = (imgUrl) => {
         return new Promise((resolve) => {
-          const img = new Image()
-          img.crossOrigin = 'Anonymous'
-          img.onload = () => {
-            try {
-              const canvas = document.createElement('canvas')
-              canvas.width = 1
-              canvas.height = 1
-              const ctx = canvas.getContext('2d')
-              ctx.drawImage(img, 0, 0, 1, 1)
-              const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data
-              // Translucent overlay color for high contrast premium CRT background glows
-              resolve(`rgba(${r}, ${g}, ${b}, 0.38)`)
-            } catch (e) {
-              resolve('rgba(255, 255, 255, 0.03)')
+          if (!imgUrl) return resolve('rgba(255, 255, 255, 0.03)');
+          const id = ++extractionId;
+          extractionPromises.set(id, resolve);
+          colorWorker.postMessage({ imgUrl, id });
+          
+          // Fallback timeout in case worker fails or fetch hangs
+          setTimeout(() => {
+            if (extractionPromises.has(id)) {
+              extractionPromises.get(id)('rgba(255, 255, 255, 0.03)');
+              extractionPromises.delete(id);
             }
-          }
-          img.onerror = () => resolve('rgba(255, 255, 255, 0.03)')
-          img.src = imgUrl
+          }, 3000);
         })
       }
 
@@ -3508,7 +3533,8 @@
           '--kawaii-peach': palette.peach,
           '--kawaii-yellow': palette.yellow,
           '--kawaii-green': palette.green,
-          '--island-glow-color': palette.glow,
+          // Phase 2: Contextual Ambient Glow applies the dominant color to the whole app island
+          '--island-glow-color': dominantColor !== 'rgba(255, 255, 255, 0.03)' ? dominantColor : palette.glow,
         }
 
         return (
@@ -3585,7 +3611,7 @@
                 </div>
               </div>
 
-              <div className="left island-left" style={{ margin: 0, '--island-glow-color': 'rgba(52, 211, 153, 0.25)' }}>
+              <div className="left island-left" style={{ margin: 0 }}>
                 <WorkspaceWidget glazewm={output.glazewm} />
                 <GlazeControlsWidget glazewm={output.glazewm} />
                 <GlazeWindowWidget glazewm={output.glazewm} />
@@ -3593,7 +3619,7 @@
             </div>
 
             <div className="center" style={{ gap: '6px' }}>
-              <div className="island-center" style={{ '--island-glow-color': 'rgba(245, 158, 11, 0.2)' }}>
+              <div className="island-center">
                 {errors.length > 0 ? (
                   <div
                     className="error-log-pill status-pill"
@@ -3670,7 +3696,7 @@
               />
             </div>
 
-            <div className="right island-right" style={{ '--island-glow-color': 'rgba(139, 92, 246, 0.25)' }}>
+            <div className="right island-right">
               <ErrorBoundary>
                 <PomodoroWidget />
               </ErrorBoundary>

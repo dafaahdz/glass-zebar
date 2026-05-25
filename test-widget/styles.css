@@ -612,6 +612,28 @@ body,
   }
 }
 
+/* Phase 2: Charging Pulse Ring */
+.battery-liquid.battery-charging::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.8);
+  animation: battery-pulse-ring 2s infinite cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
+}
+
+@keyframes battery-pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.6);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 0 12px rgba(52, 211, 153, 0);
+    opacity: 0;
+  }
+}
+
 .battery .charging-icon {
   position: absolute;
   left: 6px;
